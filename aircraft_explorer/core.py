@@ -1,8 +1,10 @@
-"""Core helpers for loading and searching the local aircraft catalog."""
+"""Core helpers for loading, saving, and searching the local aircraft catalog."""
 
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -37,6 +39,32 @@ def load_aircraft(path: str | Path = DEFAULT_DATA_PATH) -> list[dict[str, Any]]:
         records.append(record)
 
     return records
+
+
+def save_aircraft(aircraft: Iterable[dict[str, Any]], path: str | Path) -> None:
+    """Atomically replace a catalog file after serializing the complete payload."""
+    data_path = Path(path)
+    data_path.parent.mkdir(parents=True, exist_ok=True)
+    serialized = json.dumps(list(aircraft), indent=2, ensure_ascii=False) + "\n"
+
+    temp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=data_path.parent,
+            prefix=f".{data_path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as file:
+            temp_path = Path(file.name)
+            file.write(serialized)
+            file.flush()
+            os.fsync(file.fileno())
+        os.replace(temp_path, data_path)
+    finally:
+        if temp_path is not None and temp_path.exists():
+            temp_path.unlink()
 
 
 def _text(value: Any) -> str:

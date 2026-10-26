@@ -1,6 +1,6 @@
 "use strict";
 
-const DATA_URL = "./data/aircraft.json";
+const DATA_URL = "./data/models.json";
 const REGISTRY_URL = "./data/registry";
 const PAGE_SIZE = 30;
 const SEARCH_DELAY = 120;

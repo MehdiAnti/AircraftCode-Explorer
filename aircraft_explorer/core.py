@@ -9,10 +9,80 @@ from pathlib import Path
 from typing import Any, Iterable
 
 DEFAULT_DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "aircraft.json"
+STRING_FIELDS = (
+    "icao_type_designator",
+    "model",
+    "manufacturer",
+    "description",
+    "source",
+    "source_id",
+    "source_url",
+    "source_retrieved_at",
+)
+
+
+def _text(value: Any) -> str:
+    """Return a safe, normalized string for comparisons."""
+    if value is None:
+        return ""
+    return " ".join(str(value).casefold().split())
+
+
+def normalize_record(record: dict[str, Any]) -> dict[str, Any]:
+    """Normalize known text fields while preserving unknown source fields."""
+    normalized = dict(record)
+    for key in STRING_FIELDS:
+        value = normalized.get(key)
+        if isinstance(value, str):
+            value = " ".join(value.split())
+            if key == "icao_type_designator":
+                value = value.upper()
+            normalized[key] = value or None
+    return normalized
+
+
+def _deduplication_key(record: dict[str, Any]) -> tuple[str, ...] | None:
+    """Prefer source identity; use a conservative complete-field fallback."""
+    source_id = _text(record.get("source_id"))
+    source = _text(record.get("source"))
+    if source_id:
+        return ("source", source, source_id)
+
+    designator = _text(record.get("icao_type_designator"))
+    model = _text(record.get("model"))
+    manufacturer = _text(record.get("manufacturer"))
+    if designator and model and manufacturer:
+        return ("fallback", designator, model, manufacturer)
+    return None
+
+
+def deduplicate_records(records: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Deduplicate deterministically and retain non-empty values from duplicates."""
+    unique: dict[tuple[str, ...], dict[str, Any]] = {}
+    result: list[dict[str, Any]] = []
+
+    for original in records:
+        record = normalize_record(original)
+        key = _deduplication_key(record)
+        if key is None:
+            result.append(record)
+            continue
+
+        previous = unique.get(key)
+        if previous is None:
+            unique[key] = record
+            result.append(record)
+            continue
+
+        for field, value in record.items():
+            if (previous.get(field) is None or previous.get(field) == "") and value not in (None, ""):
+                previous[field] = value
+
+    return result
 
 
 def load_aircraft(path: str | Path = DEFAULT_DATA_PATH) -> list[dict[str, Any]]:
-    """Load and validate the basic shape of the aircraft JSON catalog."""
+    """Load, validate, and normalize the basic shape of the aircraft JSON catalog."""
     data_path = Path(path)
 
     try:
@@ -29,23 +99,22 @@ def load_aircraft(path: str | Path = DEFAULT_DATA_PATH) -> list[dict[str, Any]]:
         if not isinstance(item, dict):
             raise ValueError(f"Aircraft record at index {index} must be a JSON object")
 
-        record = dict(item)
-        for key in ("icao_type_designator", "model", "manufacturer"):
-            value = record.get(key)
+        for key in STRING_FIELDS:
+            value = item.get(key)
             if value is not None and not isinstance(value, str):
                 raise ValueError(
                     f"Aircraft record at index {index}: {key} must be a string or null"
                 )
-        records.append(record)
+        records.append(normalize_record(item))
 
-    return records
+    return deduplicate_records(records)
 
 
 def save_aircraft(aircraft: Iterable[dict[str, Any]], path: str | Path) -> None:
-    """Atomically replace a catalog file after serializing the complete payload."""
+    """Atomically replace a catalog file after normalizing and serializing it."""
     data_path = Path(path)
     data_path.parent.mkdir(parents=True, exist_ok=True)
-    serialized = json.dumps(list(aircraft), indent=2, ensure_ascii=False) + "\n"
+    serialized = json.dumps(deduplicate_records(aircraft), indent=2, ensure_ascii=False) + "\n"
 
     temp_path: Path | None = None
     try:
@@ -67,13 +136,6 @@ def save_aircraft(aircraft: Iterable[dict[str, Any]], path: str | Path) -> None:
             temp_path.unlink()
 
 
-def _text(value: Any) -> str:
-    """Return a safe, normalized string for comparisons."""
-    if value is None:
-        return ""
-    return " ".join(str(value).casefold().split())
-
-
 def search_aircraft(
     aircraft: Iterable[dict[str, Any]],
     query: str = "",
@@ -89,7 +151,8 @@ def search_aircraft(
     model_text = _text(model)
 
     results: list[dict[str, Any]] = []
-    for item in aircraft:
+    for original in aircraft:
+        item = normalize_record(original)
         designator = _text(item.get("icao_type_designator"))
         model_name = _text(item.get("model"))
         maker = _text(item.get("manufacturer"))

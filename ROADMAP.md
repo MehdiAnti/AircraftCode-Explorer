@@ -157,4 +157,15 @@ Further possibilities, subject to explicit user approval: optional desktop or we
 
 **Acceptance criteria:** malformed CSV and candidate input fail safely; code/model matches are reported separately; disagreements and duplicate matches are visible; empty/no-match data is not treated as verification; report output is separate from the trusted catalog.
 
-**Status:** Implementation is on `phase-8-local-metadata-cross-check`; review and CI pending.
+**Status:** Complete — PR [#6](https://github.com/MehdiAnti/AircraftCode-Explorer/pull/6) merged; the CI workflow passed on Python 3.10–3.13.
+
+
+## Phase 9 — OpenSky CSV import and safe catalog merge
+
+**Goal:** Build the actual local catalog from a locally obtained OpenSky aircraft metadata CSV without routing through Wikidata discovery or the independent-evidence promotion gate.
+
+**Scope:** dedicated `import-opensky` command; flexible CSV headers; model-level grouping; merge into the selected catalog (default `data/aircraft.json`); provenance history for exact matches; conflict preservation; dry-run support; and standard-library tests.
+
+**Data-use boundary:** no automatic download or source dataset is committed. Confirm reuse and redistribution terms for the particular file before committing imported data to the public repository. Imported records remain marked unverified.
+
+**Status:** Implementation under review in PR #7. No OpenSky dataset was downloaded or bundled.

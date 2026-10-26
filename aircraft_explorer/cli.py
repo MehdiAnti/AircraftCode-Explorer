@@ -19,6 +19,7 @@ from .core import (
 from .csv_export import write_csv
 from .ingestion import verified_records
 from .metadata import MetadataError, cross_check_candidates, load_metadata_csv, write_cross_check_report
+from .opensky_import import OpenSkyImportError, import_opensky_csv, merge_opensky_records
 from .wikidata import WikidataError, fetch_wikidata_aircraft, fetch_wikidata_candidates
 
 
@@ -97,6 +98,23 @@ def build_parser() -> argparse.ArgumentParser:
     cross_check_parser.add_argument(
         "--output", default="data/metadata-cross-check.json",
         help="Report JSON path (default: data/metadata-cross-check.json).",
+    )
+
+    opensky_parser = subparsers.add_parser(
+        "import-opensky",
+        help="Import a locally obtained OpenSky metadata CSV into the selected catalog.",
+    )
+    opensky_parser.add_argument(
+        "--metadata", required=True,
+        help="Path to a locally obtained OpenSky aircraft metadata CSV; no download is performed.",
+    )
+    opensky_parser.add_argument(
+        "--output", default=None,
+        help="Catalog JSON path (default: selected catalog, normally data/aircraft.json).",
+    )
+    opensky_parser.add_argument(
+        "--dry-run", action="store_true",
+        help="Show proposed import counts without writing the catalog.",
     )
 
     promote_parser = subparsers.add_parser(
@@ -199,6 +217,36 @@ def main(argv: Sequence[str] | None = None) -> int:
             + ", ".join(f"{status}={count}" for status, count in sorted(counts.items()))
             + f". Report: {args.output}. No catalog changes made."
         )
+        return 0
+
+    if args.command == "import-opensky":
+        try:
+            imported, import_summary = import_opensky_csv(args.metadata)
+            output_path = Path(args.output) if args.output else Path(data_path)
+            existing = load_aircraft(output_path)
+            merged, merge_summary = merge_opensky_records(existing, imported)
+            if not imported:
+                raise OpenSkyImportError(
+                    "The CSV contained no usable model/type-code records; catalog was not changed."
+                )
+            if not args.dry_run:
+                save_aircraft(merged, output_path)
+        except (OSError, ValueError, json.JSONDecodeError, OpenSkyImportError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        print(
+            f"OpenSky CSV rows: {import_summary['rows_read']}; "
+            f"unique model/type records: {len(imported)}; "
+            f"skipped rows: {import_summary['rows_skipped']}; "
+            f"records added: {merge_summary['added']}; "
+            f"records enriched with provenance: {merge_summary['enriched']}; "
+            f"conflicting type codes: {import_summary['conflicting_codes']}."
+        )
+        if args.dry_run:
+            print(f"Dry run only; catalog not changed. Target: {output_path}")
+        else:
+            print(f"Catalog updated: {output_path}")
+        print("Imported OpenSky records remain unverified; this does not satisfy the promote gate.")
         return 0
 
     if args.command == "promote":

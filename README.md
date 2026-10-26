@@ -129,6 +129,24 @@ python -m aircraft_explorer discover --output /tmp/aircraft-candidates.json
 
 Discovery results are explicitly marked `verification_status: "discovered"` and classified as `model_candidate`, `individual_aircraft`, or `ambiguous`. Classification uses Wikidata class labels, descriptions, and identifier-shaped labels to flag likely serial numbers and registrations, and generic descriptions such as "aircraft" remain ambiguous. These are conservative heuristics, not proof of identity: review uncertain records against independent sources. All classes remain in `data/candidates.json` with classification reasons, while promotion blocks records classified as individual aircraft or ambiguous. The trusted `data/aircraft.json` catalog is not changed by discovery.
 
+### `import-opensky`
+
+Import a locally obtained OpenSky aircraft metadata CSV directly into the selected catalog, without Wikidata discovery or the `promote` verification gate.
+
+```bash
+python -m aircraft_explorer import-opensky --metadata /path/to/aircraft.csv --dry-run
+python -m aircraft_explorer import-opensky --metadata /path/to/aircraft.csv
+```
+
+- By default, the command merges into the selected catalog (normally `data/aircraft.json`). Use global `--data PATH` before the subcommand to choose a different catalog, or `--output PATH` to set the destination.
+- `--dry-run` reports proposed counts without writing.
+- Aircraft-level rows are grouped into unique manufacturer/model/type-code records; individual registrations are not copied.
+- Exact matches retain existing fields and gain a `source_records` provenance entry. Conflicting records remain separate for review; no ICAO code is inferred.
+- Imported records are marked `imported_unverified`; this does not make them eligible for `promote`.
+- The command reads a local CSV only and never downloads it.
+
+**Data-use caution:** confirm that the particular file and your intended use/redistribution are permitted before committing imported data to this public repository. This project does not bundle the CSV or automatically download it.
+
 ### `cross-check`
 
 Compares the discovery candidate JSON against an aircraft metadata CSV that you obtained separately. It makes no network requests, requires no API key, and does not modify the trusted catalog or the input files.

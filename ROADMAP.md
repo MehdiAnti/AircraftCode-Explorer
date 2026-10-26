@@ -90,7 +90,7 @@ Deliverables:
 - Results include source provenance.
 - Mocked tests do not depend on live network access.
 
-**Verification results (2026-10-26):** GitHub Actions run [#11](https://github.com/MehdiAnti/AircraftCode-Explorer/actions/runs/40338582604) completed successfully for parser-fix commit `cba3fb2c0948943b2e3bcab41c9b86784063e146`. All four matrix jobs (Python 3.10, 3.11, 3.12, and 3.13) succeeded. Each job ran 26 tests; the Python 3.10 log explicitly reports `Ran 26 tests` and `OK`. The initial Phase 3 runs exposed a malformed-designator test failure; the parser was fixed and the corrected run passed. The tests used mocked responses and did not query live Wikidata.
+**Verification results (2026-10-26):** An earlier run [#10](https://github.com/MehdiAnti/AircraftCode-Explorer/actions/runs/40338329794) failed because the tested commit predated the malformed-designator validation. The parser fix was subsequently verified in run [#11](https://github.com/MehdiAnti/AircraftCode-Explorer/actions/runs/40338582604). A dedicated regression test was then added in commit `648730bdeaf362cc2f3ae5d116ffa0df43467ba1`. GitHub Actions run [#14](https://github.com/MehdiAnti/AircraftCode-Explorer/actions/runs/40339675455) completed successfully on that commit. All four matrix jobs (Python 3.10, 3.11, 3.12, and 3.13) succeeded, each running 27 tests and reporting `OK`, including `test_malformed_icao_designator_is_rejected`. Tests used mocked responses and did not query live Wikidata.
 
 **Status:** Phase 3 implementation and CI verification complete. Awaiting user review/approval before Phase 4.
 
@@ -147,4 +147,4 @@ Possible items, prioritized with user approval:
 
 - **Phase 1:** Foundation files committed. Local execution not yet verified.
 - **Phase 2:** Test suite, CI workflow, README roadmap link, and roadmap status update committed. GitHub Actions run #3 passed all 14 tests across Python 3.10–3.13; user approved Phase 3.
-- **Phase 3:** Wikidata refresh, atomic catalog replacement, provenance, CLI options, mocked tests, and documentation committed. GitHub Actions run #11 passed all 26 tests on Python 3.10–3.13. User review pending before Phase 4.
+- **Phase 3:** Wikidata refresh, atomic catalog replacement, provenance, CLI options, mocked tests, and documentation committed. Added a dedicated malformed-designator regression test. GitHub Actions run #14 passed all 27 tests on Python 3.10–3.13. User review pending before Phase 4.

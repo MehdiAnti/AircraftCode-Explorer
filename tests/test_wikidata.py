@@ -84,6 +84,27 @@ class ParseWikidataResponseTests(unittest.TestCase):
         self.assertEqual(parse_wikidata_response(payload, diagnostics=diagnostics), [])
         self.assertEqual(diagnostics, ["Skipped 1 malformed or incomplete Wikidata row(s)."])
 
+    def test_unusual_binding_shapes_are_skipped_without_crashing(self):
+        payload = {
+            "results": {
+                "bindings": [
+                    {"item": None, "icao": {"value": "C172"}},
+                    {"item": "not-an-object", "icao": {"value": "C172"}},
+                    {
+                        "item": binding("https://example.com/entity/Q123"),
+                        "icao": binding("C172"),
+                    },
+                    {
+                        "item": binding("https://www.wikidata.org/entity/Q124"),
+                        "icao": None,
+                    },
+                ]
+            }
+        }
+        diagnostics = []
+        self.assertEqual(parse_wikidata_response(payload, diagnostics=diagnostics), [])
+        self.assertEqual(diagnostics, ["Skipped 4 malformed or incomplete Wikidata row(s)."])
+
     def test_missing_bindings_raises_clear_error(self):
         with self.assertRaises(WikidataError):
             parse_wikidata_response({})

@@ -3,10 +3,12 @@
 import json
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 from aircraft_explorer.core import (
     catalog_stats,
+    catalog_status,
     deduplicate_records,
     load_aircraft,
     normalize_record,
@@ -174,6 +176,52 @@ class CatalogStatsTests(unittest.TestCase):
                 "manufacturers": 0,
             },
         )
+
+
+class CatalogStatusTests(unittest.TestCase):
+    def test_status_counts_sources_missing_codes_and_timestamps(self):
+        aircraft = [
+            {
+                "icao_type_designator": "C172",
+                "manufacturer": "Cessna",
+                "source": "Wikidata",
+                "source_retrieved_at": "2026-10-25T12:00:00Z",
+            },
+            {
+                "manufacturer": "Cessna",
+                "source": "wikidata",
+                "source_retrieved_at": "2026-10-26T00:00:00+00:00",
+            },
+            {"model": "Unknown source and timestamp"},
+            {"source": "Other", "source_retrieved_at": "not-a-date"},
+        ]
+        status = catalog_status(
+            aircraft,
+            now=datetime(2026, 10, 26, 12, 0, tzinfo=timezone.utc),
+        )
+        self.assertEqual(status["aircraft"], 4)
+        self.assertEqual(status["with_icao_type_designator"], 1)
+        self.assertEqual(status["missing_icao_type_designator"], 3)
+        self.assertEqual(status["manufacturers"], 1)
+        self.assertEqual(status["sources"], {"Other": 1, "Unknown": 1, "Wikidata": 2})
+        self.assertEqual(status["with_retrieval_timestamp"], 2)
+        self.assertEqual(status["missing_retrieval_timestamp"], 1)
+        self.assertEqual(status["invalid_retrieval_timestamp"], 1)
+        self.assertEqual(status["oldest_retrieved_at"], "2026-10-25T12:00:00Z")
+        self.assertEqual(status["latest_retrieved_at"], "2026-10-26T00:00:00Z")
+        self.assertEqual(status["latest_retrieval_age_days"], 0.5)
+
+    def test_status_unknown_freshness_when_no_valid_timestamps(self):
+        status = catalog_status([{"model": "No timestamp"}])
+        self.assertIsNone(status["latest_retrieved_at"])
+        self.assertIsNone(status["latest_retrieval_age_days"])
+        self.assertEqual(status["missing_retrieval_timestamp"], 1)
+
+    def test_empty_status(self):
+        status = catalog_status([])
+        self.assertEqual(status["aircraft"], 0)
+        self.assertEqual(status["sources"], {})
+        self.assertIsNone(status["latest_retrieved_at"])
 
 
 if __name__ == "__main__":

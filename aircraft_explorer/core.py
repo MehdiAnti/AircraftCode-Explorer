@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -217,5 +218,89 @@ def catalog_stats(aircraft: Iterable[dict[str, Any]]) -> dict[str, int]:
                 for item in records
                 if _text(item.get("manufacturer"))
             }
+        ),
+    }
+
+
+def catalog_status(
+    aircraft: Iterable[dict[str, Any]],
+    *,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Return catalog quality, source, and retrieval-freshness information.
+
+    Timestamps are parsed as ISO 8601. Naive timestamps are treated as UTC;
+    invalid non-empty timestamp strings are counted but never guessed or repaired.
+    The optional clock makes age calculations deterministic in tests.
+    """
+    records = list(aircraft)
+    with_designator = sum(
+        bool(_text(item.get("icao_type_designator"))) for item in records
+    )
+    source_counts: dict[str, int] = {}
+    parsed_timestamps: list[datetime] = []
+    missing_timestamps = 0
+    invalid_timestamps = 0
+
+    for item in records:
+        source_value = item.get("source")
+        source_label = " ".join(source_value.split()) if isinstance(source_value, str) else ""
+        if not source_label:
+            source_label = "Unknown"
+        source_key = source_label.casefold()
+        if source_key in source_counts:
+            source_counts[source_key] += 1
+        else:
+            source_counts[source_key] = 1
+
+        timestamp_value = item.get("source_retrieved_at")
+        if not isinstance(timestamp_value, str) or not timestamp_value.strip():
+            missing_timestamps += 1
+            continue
+
+        timestamp_text = timestamp_value.strip()
+        try:
+            parsed = datetime.fromisoformat(
+                timestamp_text[:-1] + "+00:00" if timestamp_text.endswith("Z") else timestamp_text
+            )
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            parsed_timestamps.append(parsed.astimezone(timezone.utc))
+        except ValueError:
+            invalid_timestamps += 1
+
+    # Keep a readable label while grouping source names case-insensitively.
+    source_display: dict[str, str] = {}
+    for item in records:
+        source_value = item.get("source")
+        source_label = " ".join(source_value.split()) if isinstance(source_value, str) else ""
+        source_label = source_label or "Unknown"
+        source_display.setdefault(source_label.casefold(), source_label)
+    sources = {
+        source_display[key]: source_counts[key]
+        for key in sorted(source_counts)
+    }
+
+    latest = max(parsed_timestamps) if parsed_timestamps else None
+    oldest = min(parsed_timestamps) if parsed_timestamps else None
+    current_time = now or datetime.now(timezone.utc)
+    if current_time.tzinfo is None:
+        current_time = current_time.replace(tzinfo=timezone.utc)
+    current_time = current_time.astimezone(timezone.utc)
+
+    return {
+        "aircraft": len(records),
+        "with_icao_type_designator": with_designator,
+        "missing_icao_type_designator": len(records) - with_designator,
+        "manufacturers": catalog_stats(records)["manufacturers"],
+        "sources": sources,
+        "with_retrieval_timestamp": len(parsed_timestamps),
+        "missing_retrieval_timestamp": missing_timestamps,
+        "invalid_retrieval_timestamp": invalid_timestamps,
+        "oldest_retrieved_at": oldest.isoformat().replace("+00:00", "Z") if oldest else None,
+        "latest_retrieved_at": latest.isoformat().replace("+00:00", "Z") if latest else None,
+        "latest_retrieval_age_days": (
+            round(max(0.0, (current_time - latest).total_seconds()) / 86400, 2)
+            if latest else None
         ),
     }

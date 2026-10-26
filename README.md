@@ -21,10 +21,11 @@ cd AircraftCode-Explorer
 
 Run commands from the repository root. There is no package installation step yet; the project can be run directly from the checkout.
 
-Check the catalog summary:
+Check basic catalog statistics and the more detailed quality/freshness status:
 
 ```bash
 python -m aircraft_explorer stats
+python -m aircraft_explorer status
 ```
 
 Search the local catalog:
@@ -99,6 +100,22 @@ Shows the number of records, records with a designator, and distinct non-empty m
 ```bash
 python -m aircraft_explorer stats
 python -m aircraft_explorer stats --json
+```
+
+### `status`
+
+Reports catalog quality and provenance without making network requests:
+
+- Total records, records with/missing ICAO designators, and distinct manufacturers.
+- Record counts by source, with missing source labels grouped as `Unknown`.
+- Counts of valid, missing, and invalid retrieval timestamps.
+- Oldest and latest valid retrieval timestamps in UTC, plus the age in days of the latest timestamp.
+
+Retrieval timestamps are metadata supplied by the source. If none are valid, freshness is reported as unknown rather than inferred. A timestamp without a timezone is interpreted as UTC; malformed timestamps are counted as invalid and excluded from freshness calculations.
+
+```bash
+python -m aircraft_explorer status
+python -m aircraft_explorer status --json
 ```
 
 ### `update`

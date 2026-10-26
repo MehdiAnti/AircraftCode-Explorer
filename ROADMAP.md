@@ -28,8 +28,8 @@ Build a maintainable aircraft catalog and explorer that supports searching by IC
 | 3 | Wikidata data refresh | Complete — verified and approved by user |
 | 4 | Data quality, normalization, and provenance | Complete — verified and approved by user |
 | 5 | Documentation and release readiness | Complete — PR #1 merged; CI status should be checked separately |
-| 6.1–6.2 | CSV export, search, and sorting | In progress — combined review branch |
-| 6.3 | Catalog status and freshness | Planned; wait for approval after 6.1–6.2 |
+| 6.1–6.2 | CSV export, search, and sorting | Complete — PR #2 merged |
+| 6.3 | Catalog status and freshness | In progress — dedicated review branch |
 
 ## Phase 1 — Repository foundation and local catalog CLI
 
@@ -104,13 +104,20 @@ Build a maintainable aircraft catalog and explorer that supports searching by IC
 
 **Acceptance criteria:** Sorting is case-insensitive and deterministic; filters still combine; records without designators remain searchable; CLI help and README match behavior.
 
-**Status:** Implemented together with Phase 6.1 on a dedicated branch for one combined pull request. CI results and user approval are pending until verified.
+**Status:** Complete. CSV export and selectable sorting were merged together in PR [#2](https://github.com/MehdiAnti/AircraftCode-Explorer/pull/2) on 2026-10-26.
 
 ### Phase 6.3 — Catalog status and freshness
 
 **Scope:** Add a status view for total records, missing designators, source distribution, and available freshness/retrieval timestamps. Report unknown metadata as unknown; do not infer freshness when timestamps are absent.
 
-**Status:** Planned. Do not start until the user reviews and approves the combined Phase 6.1–6.2 pull request.
+**Acceptance criteria:**
+- Counts are computed from the selected local catalog, without a network request.
+- Source labels are grouped consistently; missing labels are explicitly shown as unknown.
+- Valid retrieval timestamps are summarized in UTC; missing and invalid values are counted separately.
+- If no valid timestamp exists, freshness and age are reported as unknown, not guessed.
+- JSON output is machine-readable and human-readable output is clear.
+
+**Status:** Implemented on `phase-6-3-catalog-status`; tests and CI are pending review.
 
 Further possibilities, subject to explicit user approval: optional desktop or web interface, packaging, and additional source adapters if licensing and data quality permit.
 
@@ -121,5 +128,5 @@ Further possibilities, subject to explicit user approval: optional desktop or we
 - **Phase 3:** Wikidata refresh, provenance, CLI options, mocked tests, and documentation committed; run #14 passed 27 tests on Python 3.10–3.13; user approved.
 - **Phase 4:** Normalization, deterministic deduplication, validation, diagnostics, tests, and provenance docs committed; run #27 passed 34 tests on Python 3.10–3.13; user approved.
 - **Phase 5:** Documentation and release-readiness guidance merged in PR #1. No license has been selected and no release tag has been created.
-- **Phase 6.1–6.2:** CSV export and selectable search sorting are being prepared together in one dedicated-branch pull request. No aircraft data is being added or changed.
-- **Phase 6.3:** Deferred until the combined Phase 6.1–6.2 changes have been reviewed and approved.
+- **Phase 6.1–6.2:** CSV export and selectable search sorting merged in PR #2. No aircraft data was added or changed.
+- **Phase 6.3:** Catalog status and freshness reporting is implemented on a dedicated branch and awaiting CI/review. No aircraft data is being added or changed.

@@ -179,7 +179,7 @@ Further possibilities, subject to explicit user approval: optional desktop or we
 - Keep the existing visual design and use expandable cards to show additional available aircraft fields.
 - Generate compressed JSON registry shards from the OpenSky CSV, partitioned by two-character field prefixes. Load matching shards on demand and cache them in the browser session.
 - Export available registration, ICAO24, manufacturer, model, type code, serial/line number, operator/callsign, owner, registration and flight dates, equipment flags, notes, and source provenance.
-- Generate the complete compressed aircraft-level JSON registry and search shards into the GitHub Pages artifact rather than committing large registry data to Git history. Continue committing only model-level `data/models.json` on scheduled refresh.
+- Generate the complete compressed aircraft-level JSON registry and search shards into the GitHub Pages artifact rather than committing large registry data to Git history. Continue committing only model-level `data/aircraft.json` on scheduled refresh.
 - Update tests, Actions workflows, README, and web documentation.
 
 **Search behavior:** Registry search requires at least two letters or digits and performs case-insensitive prefix matching with punctuation ignored. The Refresh data button reloads the latest model catalog JSON; it does not trigger Actions.
@@ -192,12 +192,12 @@ Further possibilities, subject to explicit user approval: optional desktop or we
 **Goal:** Keep model-level catalog data separate from airframe-level records while making all individual-aircraft fields directly available in the published website data.
 
 **Scope:**
-- Rename the tracked model catalog to `data/models.json` and update the Python CLI default, workflow, website catalog loader, tests, and documentation.
-- Publish the full individual-aircraft registry as `data/aircraft.json` and `data/aircraft.json.gz`; keep the website's on-demand compressed search shards for performance.
+- Keep the existing tracked model catalog at `data/aircraft.json` to preserve the large existing dataset; update the workflow, website, tests, and documentation to publish individual airframes separately.
+- Publish the full individual-aircraft registry as `data/airframes.json` and `data/airframes.json.gz`; keep the website's on-demand compressed search shards for performance.
 - Preserve expandable model and individual-aircraft cards; the website must not load the large full registry on initial page load.
 - Change the automated refresh schedule to the first day of each month at 06:00 UTC while retaining manual workflow dispatch.
 - Validate both published JSON arrays and required individual-aircraft field keys before deployment. Commit only the model catalog, never the large individual-aircraft registry.
 
-**Acceptance criteria:** CLI defaults to `data/models.json`; website catalog fetches `data/models.json`; registry search continues to use shards; the Pages artifact contains model JSON, plain airframe JSON, gzip airframe JSON, and all four shard groups; tests and workflow validation pass.
+**Acceptance criteria:** CLI defaults to `data/aircraft.json`; website catalog fetches `data/aircraft.json`; registry search continues to use shards; the Pages artifact contains model JSON, plain `data/airframes.json`, gzip `data/airframes.json.gz`, and all four shard groups; tests and workflow validation pass.
 
 **Status:** Proposed on a feature branch. CI and a live Pages deployment must be observed before considering this phase complete.

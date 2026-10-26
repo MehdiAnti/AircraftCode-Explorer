@@ -36,7 +36,7 @@ class OpenSkyImportTests(unittest.TestCase):
         path = self.make_csv(
             "icao24,registration,manufacturericao,manufacturername,model,typecode,serialnumber,operator,operatoricao,owner\n"
             "abc123,N123AB,CESS,Cessna,172 Skyhawk,C172,12345,Example Air,EXA,Example Owner\n"
-            "def456,N456CD,CESS,Cessna,172 Skyhawk,C172,67890,Example Air,EXA,Example Owner\n"
+            "def456,N123CD,CESS,Cessna,172 Skyhawk,C172,67890,Example Air,EXA,Example Owner\n"
         )
         with tempfile.TemporaryDirectory() as directory:
             summary = write_opensky_registry_shards(path, directory, retrieved_at="2026-10-27T06:00:00Z")

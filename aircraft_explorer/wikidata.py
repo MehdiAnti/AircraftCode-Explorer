@@ -32,12 +32,11 @@ LIMIT 5000
 # Discovery intentionally includes aircraft entities without an ICAO designator.
 # Results remain candidates until independently verified; this is not a catalog query.
 DISCOVERY_QUERY = """
-SELECT DISTINCT ?item ?itemLabel ?itemDescription ?manufacturer ?manufacturerLabel ?icao ?class ?classLabel
+SELECT DISTINCT ?item ?itemLabel ?itemDescription ?manufacturer ?manufacturerLabel ?icao
 WHERE {
   ?item wdt:P31/wdt:P279* wd:Q11436.
   OPTIONAL { ?item wdt:P239 ?icao. }
   OPTIONAL { ?item wdt:P176 ?manufacturer. }
-  OPTIONAL { ?item wdt:P31 ?class. }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
 }
 ORDER BY ?item

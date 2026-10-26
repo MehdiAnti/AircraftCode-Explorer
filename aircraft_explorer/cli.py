@@ -7,13 +7,20 @@ import json
 import sys
 from typing import Sequence
 
-from .core import catalog_stats, load_aircraft, search_aircraft
+from .core import (
+    DEFAULT_DATA_PATH,
+    catalog_stats,
+    load_aircraft,
+    save_aircraft,
+    search_aircraft,
+)
+from .wikidata import WikidataError, fetch_wikidata_aircraft
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="aircraft-explorer",
-        description="Search a local catalog of aircraft.",
+        description="Search and refresh a local catalog of aircraft.",
     )
     parser.add_argument(
         "--data",
@@ -35,15 +42,53 @@ def build_parser() -> argparse.ArgumentParser:
 
     stats_parser = subparsers.add_parser("stats", help="Show catalog statistics.")
     stats_parser.add_argument("--json", action="store_true", help="Print JSON statistics.")
+
+    update_parser = subparsers.add_parser(
+        "update",
+        help="Fetch candidate aircraft records from Wikidata and replace the local catalog.",
+    )
+    update_parser.add_argument(
+        "--timeout", type=float, default=20.0, help="Request timeout in seconds."
+    )
+    update_parser.add_argument(
+        "--retries", type=int, default=3, help="Retries after transient errors (0-5)."
+    )
+    update_parser.add_argument(
+        "--allow-empty",
+        action="store_true",
+        help="Allow an empty response to replace the catalog (default: refuse).",
+    )
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    data_path = args.data or DEFAULT_DATA_PATH
+
+    if args.command == "update":
+        if args.timeout <= 0:
+            parser.error("--timeout must be greater than zero")
+        if not 0 <= args.retries <= 5:
+            parser.error("--retries must be between 0 and 5")
+
+        try:
+            records = fetch_wikidata_aircraft(timeout=args.timeout, retries=args.retries)
+            if not records and not args.allow_empty:
+                raise WikidataError(
+                    "Wikidata returned zero usable records; the existing catalog was not changed. "
+                    "Use --allow-empty only if replacing it with an empty catalog is intentional."
+                )
+            save_aircraft(records, data_path)
+        except (OSError, ValueError, WikidataError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+
+        print(f"Updated catalog with {len(records)} record(s).")
+        return 0
 
     try:
-        aircraft = load_aircraft(args.data) if args.data else load_aircraft()
+        aircraft = load_aircraft(data_path)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

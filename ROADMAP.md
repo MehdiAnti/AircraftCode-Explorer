@@ -21,8 +21,8 @@ Build a maintainable aircraft catalog and explorer that supports searching by IC
 
 | Phase | Name | Status |
 |---|---|---|
-| 1 | Repository foundation and local catalog CLI | Complete |
-| 2 | Unit tests and continuous integration | In progress |
+| 1 | Repository foundation and local catalog CLI | Complete; execution not yet independently verified |
+| 2 | Unit tests and continuous integration | Implemented; awaiting test/CI verification and user review |
 | 3 | Wikidata data refresh | Planned |
 | 4 | Data quality, normalization, and provenance | Planned |
 | 5 | Documentation and release readiness | Planned |
@@ -56,12 +56,17 @@ Deliverables:
 - GitHub Actions workflow that runs tests on pushes and pull requests.
 - A documented local test command.
 
+**Implemented:**
+- `tests/test_core.py` covers loading, missing files, invalid JSON shapes/records, case-insensitive search, description search, filters, combined filters, no matches, and statistics.
+- `.github/workflows/tests.yml` runs the standard-library unittest suite on Python 3.10–3.13 for pushes to `main`, pull requests, and manual dispatch.
+- `README.md` documents the test command and links this roadmap.
+
 **Acceptance criteria:**
 - Tests cover successful loads, missing files, invalid top-level JSON shape, invalid records, search matching, filtering, and statistics.
-- CI uses a supported Python version and runs without third-party runtime dependencies.
+- CI uses supported Python versions and runs without third-party runtime dependencies.
 - Report the actual test result. If tests cannot be executed in the current environment, state that clearly.
 
-**Status:** In progress.
+**Status:** Implementation committed. Test execution and GitHub Actions results have not yet been verified, so this phase remains open pending verification and user review.
 
 ## Phase 3 — Wikidata data refresh
 
@@ -133,4 +138,4 @@ Possible items, prioritized with user approval:
 ## Phase completion log
 
 - **Phase 1:** Foundation files committed. Local execution not yet verified.
-- **Phase 2:** Pending completion and user review.
+- **Phase 2:** Test suite, CI workflow, README roadmap link, and this project roadmap committed. Automated test/CI results still need verification.

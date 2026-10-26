@@ -41,6 +41,7 @@ class OpenSkyImportTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             summary = write_opensky_registry_shards(path, directory, retrieved_at="2026-10-27T06:00:00Z")
             self.assertEqual(summary["registry_records"], 2)
+            self.assertTrue((Path(directory) / "icao24" / "ab.json.gz").exists())
             self.assertTrue((Path(directory) / "registration" / "n1.json.gz").exists())
             self.assertTrue((Path(directory) / "typecode" / "c1.json.gz").exists())
             self.assertTrue((Path(directory) / "operator" / "ex.json.gz").exists())

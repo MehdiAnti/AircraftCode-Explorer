@@ -216,7 +216,7 @@ def write_opensky_registry_shards(
     temporary_paths: dict[tuple[str, str], Path] = {}
     final_paths: dict[tuple[str, str], Path] = {}
     counts: dict[str, dict[str, int]] = {name: {} for name in fields}
-    rows_read = rows_skipped = 0
+    rows_read = rows_skipped = records_written = 0
     try:
         with source_path.open("r", encoding="utf-8-sig", newline="") as source:
             reader = csv.DictReader(source)
@@ -242,6 +242,7 @@ def write_opensky_registry_shards(
                 if not any(record.values()):
                     rows_skipped += 1
                     continue
+                records_written += 1
                 record["source"] = "OpenSky Aircraft Metadata"
                 record["source_url"] = OPENSKY_SOURCE_URL
                 record["source_retrieved_at"] = timestamp
@@ -295,7 +296,7 @@ def write_opensky_registry_shards(
     return {
         "rows_read": rows_read,
         "rows_skipped": rows_skipped,
-        "registry_records": max((sum(values.values()) for values in counts.values()), default=0),
+        "registry_records": records_written,
         "shards": {field: dict(sorted(values.items())) for field, values in counts.items()},
         "source_retrieved_at": timestamp,
     }

@@ -30,7 +30,7 @@ Build a maintainable aircraft catalog and explorer that supports searching by IC
 | 5 | Documentation and release readiness | Complete — PR #1 merged; CI status should be checked separately |
 | 6.1–6.2 | CSV export, search, and sorting | Complete — PR #2 merged |
 | 6.3 | Catalog status and freshness | Complete — PR #3 merged |
-| 7 | Broad aircraft discovery, field-level verification, and safe promotion | Complete — PR #4 merged; classification refinements merged in PR #5 |\n| 8 | Local metadata cross-check and conflict reporting | Implemented in review PR; no API, automatic download, or catalog mutation |
+| 7–8 | Legacy candidate discovery and metadata cross-check | Retired in Phase 10 in favor of catalog-first review |
 
 ## Phase 1 — Repository foundation and local catalog CLI
 
@@ -131,7 +131,7 @@ Further possibilities, subject to explicit user approval: optional desktop or we
 - **Phase 5:** Documentation and release-readiness guidance merged in PR #1. No license has been selected and no release tag has been created.
 - **Phase 6.1–6.2:** CSV export and selectable search sorting merged in PR #2. No aircraft data was added or changed.
 - **Phase 6.3:** Catalog status and freshness reporting merged in PR #3. No aircraft data was added or changed.
-- **Phase 7:** Discovery and verification workflow merged in PR #4. The trusted catalog remains unchanged; follow-up discovery-classification improvements are under review.
+- **Phases 7–8:** Legacy candidate-discovery workflow has been retired in Phase 10; local catalog import, review, and manual verification are now the documented path.
 
 
 

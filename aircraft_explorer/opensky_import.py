@@ -7,7 +7,6 @@ import gzip
 import json
 import os
 import re
-import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -266,7 +265,7 @@ def write_opensky_registry_shards(
     *,
     retrieved_at: str | None = None,
 ) -> dict[str, Any]:
-    """Stream airframe records into compressed, field-specific first-character shards."""
+    """Stream airframe records into compressed, field-specific two-character shards."""
     source_path = Path(csv_path)
     destination = Path(output_dir)
     timestamp = retrieved_at or datetime.now(timezone.utc).isoformat()

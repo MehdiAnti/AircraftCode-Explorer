@@ -45,11 +45,13 @@ jobs:
         run: |
           python -m aircraft_explorer import-opensky \
             --metadata "$RUNNER_TEMP/aircraftDatabase.csv" \
-            --output data/aircraft.json
+            --output data/aircraft.json \\
+            --registry-dir data/registry
 
       - name: Validate generated catalog
         run: |
           python - <<'PY'
+          import gzip
           import json
           from pathlib import Path
           from aircraft_explorer.core import load_aircraft
@@ -64,14 +66,24 @@ jobs:
           records = load_aircraft(path)
           if len(records) != len(payload):
               raise SystemExit("Catalog validation changed the record count.")
-          print(f"Validated {len(records):,} catalog records.")
+          shard_files = list(Path("data/registry").glob("*/*.json.gz"))
+          if not shard_files:
+              raise SystemExit("No compressed registry search shards were generated.")
+          shard_records = 0
+          for shard in shard_files:
+              with gzip.open(shard, "rt", encoding="utf-8") as file:
+                  shard_data = json.load(file)
+              if not isinstance(shard_data, list) or any(not isinstance(item, dict) for item in shard_data):
+                  raise SystemExit(f"Invalid registry shard: {shard}")
+              shard_records += len(shard_data)
+          print(f"Validated {len(records):,} catalog records and {len(shard_files):,} registry shards ({shard_records:,} indexed entries).")
           PY
 
       - name: Commit catalog JSON when changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/aircraft.json
+          git add data/aircraft.json data/registry/
           if git diff --cached --quiet; then
             echo "Catalog JSON is unchanged; no commit is needed."
           else

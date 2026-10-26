@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from pathlib import Path
 from typing import Sequence
 
 from .core import (
@@ -14,6 +15,7 @@ from .core import (
     save_aircraft,
     search_aircraft,
 )
+from .csv_export import write_csv
 from .wikidata import WikidataError, fetch_wikidata_aircraft
 
 
@@ -38,10 +40,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="Filter by ICAO type designator.",
     )
     search_parser.add_argument("--model", default="", help="Filter by model name.")
+    search_parser.add_argument(
+        "--sort-by",
+        choices=("manufacturer", "model", "icao", "description"),
+        default="manufacturer",
+        help="Sort results by this field (default: manufacturer).",
+    )
+    search_parser.add_argument(
+        "--descending", action="store_true", help="Sort in descending order."
+    )
     search_parser.add_argument("--json", action="store_true", help="Print JSON results.")
 
     stats_parser = subparsers.add_parser("stats", help="Show catalog statistics.")
     stats_parser.add_argument("--json", action="store_true", help="Print JSON statistics.")
+
+    export_parser = subparsers.add_parser("export", help="Export the catalog as CSV.")
+    export_parser.add_argument(
+        "--output",
+        default="-",
+        help="Output CSV path; use '-' or omit to write to standard output.",
+    )
 
     update_parser = subparsers.add_parser(
         "update",
@@ -110,12 +128,27 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"Manufacturers: {result['manufacturers']}")
         return 0
 
+    if args.command == "export":
+        try:
+            if args.output == "-":
+                write_csv(aircraft, sys.stdout)
+            else:
+                output_path = Path(args.output)
+                with output_path.open("w", encoding="utf-8", newline="") as output_file:
+                    write_csv(aircraft, output_file)
+        except OSError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        return 0
+
     results = search_aircraft(
         aircraft,
         args.query,
         manufacturer=args.manufacturer,
         icao_type_designator=args.icao_type_designator,
         model=args.model,
+        sort_by=args.sort_by,
+        descending=args.descending,
     )
     if args.json:
         print(json.dumps(results, indent=2, ensure_ascii=False))

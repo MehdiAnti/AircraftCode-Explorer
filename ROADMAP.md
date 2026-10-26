@@ -27,8 +27,9 @@ Build a maintainable aircraft catalog and explorer that supports searching by IC
 | 2 | Unit tests and continuous integration | Verified — 14 tests passed on Python 3.10–3.13; user review status previously recorded |
 | 3 | Wikidata data refresh | Complete — verified and approved by user |
 | 4 | Data quality, normalization, and provenance | Complete — verified and approved by user |
-| 5 | Documentation and release readiness | In progress — branch `phase-5-documentation-release-readiness`; awaiting CI and user review |
-| 6 | Optional usability improvements | Planned |
+| 5 | Documentation and release readiness | Complete — PR #1 merged; CI status should be checked separately |
+| 6.1–6.2 | CSV export, search, and sorting | In progress — combined review branch |
+| 6.3 | Catalog status and freshness | Planned; wait for approval after 6.1–6.2 |
 
 ## Phase 1 — Repository foundation and local catalog CLI
 
@@ -85,15 +86,33 @@ Build a maintainable aircraft catalog and explorer that supports searching by IC
 - License status and data-source attribution are explicit.
 - CI passes for all supported Python versions.
 
-**Status:** In progress on `phase-5-documentation-release-readiness`; results and PR link will be added after checks run.
+**Status:** Complete. Documentation and release-readiness guidance were merged in PR [#1](https://github.com/MehdiAnti/AircraftCode-Explorer/pull/1). The merge was confirmed on 2026-10-26. Verify the associated workflow before claiming CI passed.
 
-## Phase 6 — Optional usability improvements
+## Phase 6 — Usability improvements
 
-**Goal:** Consider enhancements after the core catalog and refresh flow are reliable.
+**Goal:** Make the local catalog easier to export, search, and inspect while keeping the project dependency-free.
 
-Possible items, subject to explicit user approval: CSV export; structured filters and sorting; catalog freshness/status command; optional desktop or web interface; packaging; additional source adapters if licensing and data quality permit.
+### Phase 6.1 — CSV export
 
-Each enhancement must be proposed before implementation, and the project must remain usable without optional features.
+**Scope:** Add an `export` command using Python's standard-library CSV support. Write to stdout by default or to a user-selected output path. Keep known columns in a stable order, include additional source-specific fields, represent missing values as empty cells, and safely encode nested values.
+
+**Acceptance criteria:** Correct CSV quoting for commas and quotes; UTF-8 output; empty catalog emits headers; file and stdout modes work; JSON catalog remains unchanged.
+
+### Phase 6.2 — Search and sorting
+
+**Scope:** Add selectable sorting by manufacturer, model, ICAO designator, or description, plus descending order. Keep the existing default ordering and search filters. Missing sort values remain last in either direction.
+
+**Acceptance criteria:** Sorting is case-insensitive and deterministic; filters still combine; records without designators remain searchable; CLI help and README match behavior.
+
+**Status:** Implemented together with Phase 6.1 on a dedicated branch for one combined pull request. CI results and user approval are pending until verified.
+
+### Phase 6.3 — Catalog status and freshness
+
+**Scope:** Add a status view for total records, missing designators, source distribution, and available freshness/retrieval timestamps. Report unknown metadata as unknown; do not infer freshness when timestamps are absent.
+
+**Status:** Planned. Do not start until the user reviews and approves the combined Phase 6.1–6.2 pull request.
+
+Further possibilities, subject to explicit user approval: optional desktop or web interface, packaging, and additional source adapters if licensing and data quality permit.
 
 ## Completion log
 
@@ -101,4 +120,6 @@ Each enhancement must be proposed before implementation, and the project must re
 - **Phase 2:** Test suite and CI committed; run #3 passed 14 tests on Python 3.10–3.13.
 - **Phase 3:** Wikidata refresh, provenance, CLI options, mocked tests, and documentation committed; run #14 passed 27 tests on Python 3.10–3.13; user approved.
 - **Phase 4:** Normalization, deterministic deduplication, validation, diagnostics, tests, and provenance docs committed; run #27 passed 34 tests on Python 3.10–3.13; user approved.
-- **Phase 5:** Documentation and release-readiness guidance are being prepared on a dedicated branch for review through one pull request. No license has been selected, no release tag has been created, and the catalog data remains untouched.
+- **Phase 5:** Documentation and release-readiness guidance merged in PR #1. No license has been selected and no release tag has been created.
+- **Phase 6.1–6.2:** CSV export and selectable search sorting are being prepared together in one dedicated-branch pull request. No aircraft data is being added or changed.
+- **Phase 6.3:** Deferred until the combined Phase 6.1–6.2 changes have been reviewed and approved.

@@ -19,6 +19,12 @@ STRING_FIELDS = (
     "source_url",
     "source_retrieved_at",
 )
+SORT_FIELDS = {
+    "manufacturer": "manufacturer",
+    "model": "model",
+    "icao": "icao_type_designator",
+    "description": "description",
+}
 
 
 def _text(value: Any) -> str:
@@ -145,8 +151,17 @@ def search_aircraft(
     manufacturer: str = "",
     icao_type_designator: str = "",
     model: str = "",
+    sort_by: str = "manufacturer",
+    descending: bool = False,
 ) -> list[dict[str, Any]]:
-    """Search records using case-insensitive substring matching."""
+    """Search records using case-insensitive substring matching and stable sorting.
+
+    Missing values always sort last, including when descending order is selected.
+    """
+    if sort_by not in SORT_FIELDS:
+        choices = ", ".join(SORT_FIELDS)
+        raise ValueError(f"sort_by must be one of: {choices}")
+
     query_text = _text(query)
     manufacturer_text = _text(manufacturer)
     designator_text = _text(icao_type_designator)
@@ -173,14 +188,19 @@ def search_aircraft(
             continue
         results.append(dict(item))
 
-    return sorted(
-        results,
+    field = SORT_FIELDS[sort_by]
+    results.sort(
         key=lambda item: (
+            _text(item.get(field)),
             _text(item.get("manufacturer")),
             _text(item.get("model")),
             _text(item.get("icao_type_designator")),
         ),
+        reverse=descending,
     )
+    # A second stable sort keeps blank values last in both sort directions.
+    results.sort(key=lambda item: not bool(_text(item.get(field))))
+    return results
 
 
 def catalog_stats(aircraft: Iterable[dict[str, Any]]) -> dict[str, int]:

@@ -37,7 +37,7 @@ def verification_issues(record: dict[str, Any]) -> list[str]:
         issues.append("verification_status must be 'verified'")
 
     classification = record.get("candidate_classification")
-    if classification and classification != "model_candidate":
+    if "candidate_classification" in record and classification != "model_candidate":
         issues.append(
             f"candidate classification is '{classification}'; review and classify it as a model candidate before promotion"
         )

@@ -7,6 +7,7 @@ import gzip
 import json
 import os
 import re
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -254,5 +255,114 @@ def write_opensky_registry_csv(
         "rows_skipped": rows_skipped,
         "registry_records": records_written,
         "output_file": destination.name,
+        "source_retrieved_at": timestamp,
+    }
+
+
+
+def write_opensky_registry_shards(
+    csv_path: str | Path,
+    output_dir: str | Path,
+    *,
+    retrieved_at: str | None = None,
+) -> dict[str, Any]:
+    """Stream airframe records into compressed, field-specific first-character shards."""
+    source_path = Path(csv_path)
+    destination = Path(output_dir)
+    timestamp = retrieved_at or datetime.now(timezone.utc).isoformat()
+    fields = {
+        "registration": "registration",
+        "icao_type_designator": "typecode",
+        "operator": "operator",
+    }
+    field_dirs = {name: destination / name for name in fields}
+    for directory in field_dirs.values():
+        directory.mkdir(parents=True, exist_ok=True)
+
+    writers: dict[tuple[str, str], Any] = {}
+    temporary_paths: dict[tuple[str, str], Path] = {}
+    final_paths: dict[tuple[str, str], Path] = {}
+    counts: dict[str, dict[str, int]] = {name: {} for name in fields}
+    rows_read = rows_skipped = 0
+    try:
+        with source_path.open("r", encoding="utf-8-sig", newline="") as source:
+            reader = csv.DictReader(source)
+            if not reader.fieldnames:
+                raise OpenSkyImportError("OpenSky metadata CSV is empty or has no header row")
+            headers = {_header_key(h): h for h in reader.fieldnames if isinstance(h, str)}
+            if not any(key in headers for key in ("registration", "icao24")):
+                raise OpenSkyImportError("OpenSky CSV needs a registration or icao24 column")
+            mapped_headers = {
+                target: headers[source_key]
+                for source_key, target in _REGISTRY_FIELDS.items()
+                if source_key in headers
+            }
+            for row in reader:
+                if not isinstance(row, dict):
+                    rows_skipped += 1
+                    continue
+                rows_read += 1
+                record = {
+                    target: _clean(row.get(header))
+                    for target, header in mapped_headers.items()
+                }
+                if not any(record.values()):
+                    rows_skipped += 1
+                    continue
+                record["source"] = "OpenSky Aircraft Metadata"
+                record["source_url"] = OPENSKY_SOURCE_URL
+                record["source_retrieved_at"] = timestamp
+                record["verification_status"] = "imported_unverified"
+                for field, directory in field_dirs.items():
+                    value = record.get(field)
+                    if not value:
+                        continue
+                    first = re.sub(r"[^a-z0-9]", "", value.casefold())[:1] or "_"
+                    key = (field, first)
+                    if key not in writers:
+                        final_path = directory / f"{first}.json.gz"
+                        temp_path = directory / f".{first}.json.gz.tmp"
+                        temporary_paths[key] = temp_path
+                        final_paths[key] = final_path
+                        writer = gzip.open(temp_path, "wt", encoding="utf-8", newline="")
+                        writer.write("[")
+                        writers[key] = writer
+                        counts[field][first] = 0
+                    writer = writers[key]
+                    if counts[field][first]:
+                        writer.write(",")
+                    json.dump(record, writer, ensure_ascii=False, separators=(",", ":"))
+                    counts[field][first] += 1
+            for writer in writers.values():
+                writer.write("]")
+                writer.close()
+            writers.clear()
+        for key, temp_path in temporary_paths.items():
+            os.replace(temp_path, final_paths[key])
+        for field, directory in field_dirs.items():
+            valid_names = {path.name for key, path in final_paths.items() if key[0] == field}
+            for old_path in directory.glob("*.json.gz"):
+                if old_path.name not in valid_names:
+                    old_path.unlink()
+    except (UnicodeDecodeError, csv.Error) as exc:
+        for writer in writers.values():
+            writer.close()
+        for path in temporary_paths.values():
+            path.unlink(missing_ok=True)
+        if isinstance(exc, UnicodeDecodeError):
+            raise OpenSkyImportError("OpenSky metadata CSV must be UTF-8 encoded") from exc
+        raise OpenSkyImportError(f"Could not parse metadata CSV: {exc}") from exc
+    except OSError:
+        for writer in writers.values():
+            writer.close()
+        for path in temporary_paths.values():
+            path.unlink(missing_ok=True)
+        raise
+
+    return {
+        "rows_read": rows_read,
+        "rows_skipped": rows_skipped,
+        "registry_records": max((sum(values.values()) for values in counts.values()), default=0),
+        "shards": {field: dict(sorted(values.items())) for field, values in counts.items()},
         "source_retrieved_at": timestamp,
     }

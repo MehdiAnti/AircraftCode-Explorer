@@ -1,8 +1,36 @@
 # Web explorer and automated refresh
 
-The static HTML/CSS/JavaScript website is deployed through GitHub Pages. It supports model-catalog search and separate individual-aircraft lookup by registration, ICAO24 address, ICAO type code, or operator. Search results are expandable cards, keeping the current compact design while exposing available airframe metadata only when opened.
+The static HTML/CSS/JavaScript website is deployed through GitHub Pages. It keeps model-level search separate from individual-aircraft lookup so registrations and operators never overwrite or conflict with model records.
 
-The **Refresh data** button reloads the latest published model catalog JSON. It does not trigger a workflow and does not need a GitHub token.
+## Data files
+
+| Published path | Purpose |
+| --- | --- |
+| `data/models.json` | Compact model/manufacturer/type-code catalog used by the website's catalog search and refresh button |
+| `data/aircraft.json` | Full JSON array of individual airframes, including registration, ICAO24, ICAO type code, operator, and available source metadata |
+| `data/aircraft.json.gz` | Gzip-compressed copy of the same individual-aircraft JSON array |
+| `data/registry/` | Compressed search shards for fast lookup by ICAO24, registration, type code, and operator |
+
+The website loads only `data/models.json` for the model catalog. It does **not** download the full individual-aircraft JSON on initial page load; individual-aircraft search fetches only the relevant compressed shard and caches it for the current page session. The full JSON files are published for direct data access and download.
+
+## Refresh behavior
+
+The **Refresh data** button reloads the latest published model catalog JSON at `data/models.json`. It does not trigger a workflow and does not need a GitHub token.
+
+The **Refresh OpenSky aircraft catalog and registry** workflow runs on the first day of each month at 06:00 UTC and also supports manual dispatch. It downloads the OpenSky metadata CSV to temporary runner storage, updates and validates the model catalog in `data/models.json`, generates the individual-aircraft registry and search shards, validates the outputs, commits only `data/models.json` when changed, and deploys the generated site.
+
+The CSV, full individual-aircraft JSON, and search shards are not committed to Git history. This keeps the repository small and avoids GitHub's per-file size limits while still publishing the data through Pages.
+
+## Search behavior
+
+- **Aircraft catalog:** searches model-level records and retains sorting and pagination.
+- **Registration:** finds individual airframes by registration prefix.
+- **ICAO24 address:** finds individual airframes by their six-character ICAO24 address prefix.
+- **ICAO type code:** finds individual airframes by type-code prefix.
+- **Operator:** finds individual airframes by operator-name prefix.
+- Registry lookup requires at least two letters or digits. Search ignores case and removes punctuation for registry matching.
+- Expand a result card to view available source fields, including registration, ICAO24, manufacturer, model, type code, serial/line number, operator/callsign, ownership, registration dates, build/first-flight dates, equipment flags, notes, source, and retrieval time.
+- Imported records remain `imported_unverified`. Data availability does not imply independent verification.
 
 ## First-time setup
 
@@ -12,23 +40,6 @@ The **Refresh data** button reloads the latest published model catalog JSON. It 
 4. Open the Pages URL shown in the deployment summary.
 
 A GitHub Pages site may be publicly accessible even when its source repository is private. Confirm repository plan and intended website visibility before enabling Pages.
-
-## Weekly data refresh
-
-The **Refresh OpenSky aircraft catalog and registry** workflow runs every Sunday at 06:00 UTC and also supports manual dispatch. It downloads the official OpenSky metadata CSV to temporary runner storage, runs the Python importer, validates the model JSON, full aircraft-level registry, and registry search shards, commits only `data/aircraft.json` when that catalog changes, and deploys the generated site.
-
-The CSV is not committed to the repository. The full aircraft-level registry is published as `data/aircraft-registry.json.gz`, a gzip-compressed JSON array with one record per usable source row. Each record preserves the available OpenSky fields, including ICAO24 address, registration, ICAO type code, operator, and provenance. Search shards are generated separately as compressed JSON files, split by the first two normalized characters of ICAO24 address, registration, type code, or operator. The website loads a shard on demand and caches it for the current page session. The CSV, full registry export, and search shards are not committed to Git history.
-
-## Search behavior
-
-- **Aircraft catalog:** searches the model-level catalog and retains sorting and pagination.
-- **Registration:** finds individual airframes by registration prefix.
-- **ICAO24 address:** finds an individual aircraft by its six-character ICAO24 address prefix.
-- **ICAO type code:** finds individual airframes by type-code prefix.
-- **Operator:** finds individual airframes by operator-name prefix.
-- Registry lookup requires at least two letters or digits. Search ignores case and removes punctuation for registry matching.
-- Click a result card to expand it and view all available source fields, including registration, ICAO24, manufacturer, model, type code, serial/line number, operator/callsign, ownership, registration dates, build/first-flight dates, equipment flags, notes, source, and retrieval time.
-- Imported records remain `imported_unverified`. Data availability does not imply independent verification.
 
 ## Local checks
 

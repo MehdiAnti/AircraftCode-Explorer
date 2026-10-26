@@ -23,7 +23,7 @@ Build a maintainable aircraft catalog and explorer that supports searching by IC
 |---|---|---|
 | 1 | Repository foundation and local catalog CLI | Complete; execution not yet independently verified |
 | 2 | Unit tests and continuous integration | Verified — 14 tests passed on Python 3.10–3.13; awaiting user review |
-| 3 | Wikidata data refresh | Implemented; CI verification in progress |
+| 3 | Wikidata data refresh | Verified — 26 tests passed on Python 3.10–3.13; awaiting user review |
 | 4 | Data quality, normalization, and provenance | Planned |
 | 5 | Documentation and release readiness | Planned |
 | 6 | Optional usability improvements | Planned |
@@ -90,7 +90,9 @@ Deliverables:
 - Results include source provenance.
 - Mocked tests do not depend on live network access.
 
-**Verification status:** The first CI run exposed one malformed-designator fixture being accepted; the parser was tightened to reject it. The corrected CI run is in progress. Do not mark Phase 3 complete until the final GitHub Actions result is confirmed.
+**Verification results (2026-10-26):** GitHub Actions run [#11](https://github.com/MehdiAnti/AircraftCode-Explorer/actions/runs/40338582604) completed successfully for parser-fix commit `cba3fb2c0948943b2e3bcab41c9b86784063e146`. All four matrix jobs (Python 3.10, 3.11, 3.12, and 3.13) succeeded. Each job ran 26 tests; the Python 3.10 log explicitly reports `Ran 26 tests` and `OK`. The initial Phase 3 runs exposed a malformed-designator test failure; the parser was fixed and the corrected run passed. The tests used mocked responses and did not query live Wikidata.
+
+**Status:** Phase 3 implementation and CI verification complete. Awaiting user review/approval before Phase 4.
 
 ## Phase 4 — Data quality, normalization, and provenance
 
@@ -145,4 +147,4 @@ Possible items, prioritized with user approval:
 
 - **Phase 1:** Foundation files committed. Local execution not yet verified.
 - **Phase 2:** Test suite, CI workflow, README roadmap link, and roadmap status update committed. GitHub Actions run #3 passed all 14 tests across Python 3.10–3.13; user approved Phase 3.
-- **Phase 3:** Wikidata refresh, atomic catalog replacement, provenance, CLI options, mocked tests, and documentation committed. Initial CI exposed one parser validation failure; parser fix committed and verification is pending on GitHub Actions run #11.
+- **Phase 3:** Wikidata refresh, atomic catalog replacement, provenance, CLI options, mocked tests, and documentation committed. GitHub Actions run #11 passed all 26 tests on Python 3.10–3.13. User review pending before Phase 4.

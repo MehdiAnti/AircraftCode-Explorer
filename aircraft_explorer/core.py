@@ -75,7 +75,9 @@ def deduplicate_records(records: Iterable[dict[str, Any]]) -> list[dict[str, Any
             continue
 
         for field, value in record.items():
-            if (previous.get(field) is None or previous.get(field) == "") and value not in (None, ""):
+            if (
+                previous.get(field) is None or previous.get(field) == ""
+            ) and value not in (None, ""):
                 previous[field] = value
 
     return result

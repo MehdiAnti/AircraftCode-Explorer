@@ -34,7 +34,18 @@ python -m aircraft_explorer search C172
 python -m aircraft_explorer search --manufacturer Cessna
 python -m aircraft_explorer search --model "Skyhawk"
 python -m aircraft_explorer search --icao C172
+python -m aircraft_explorer search --sort-by model
+python -m aircraft_explorer search --sort-by icao --descending
 ```
+
+Export the local catalog as CSV, either to the terminal or to a file:
+
+```bash
+python -m aircraft_explorer export
+python -m aircraft_explorer export --output aircraft.csv
+```
+
+The CSV export includes the known catalog fields in a stable order, followed by any additional source-specific fields. Missing values are empty cells; nested values in extra fields are JSON-encoded. CSV quoting and embedded commas/newlines are handled by Python's standard CSV library.
 
 The current checked-in catalog may be empty. An empty catalog is valid during development, so searches may return no results until data is added or refreshed.
 
@@ -64,9 +75,22 @@ python -m aircraft_explorer search [QUERY] [--manufacturer NAME] [--model NAME] 
 - `--manufacturer NAME`: restrict results to matching manufacturer text.
 - `--model NAME`: restrict results to matching model text.
 - `--icao CODE`: restrict results to matching ICAO type designator text.
+- `--sort-by FIELD`: sort by `manufacturer` (default), `model`, `icao`, or `description`.
+- `--descending`: reverse the selected sort order. Records with a missing sort value remain last.
 - `--json`: print results as JSON instead of the human-readable list.
 
 When multiple filters are supplied, all supplied filters must match. Missing designators do not prevent a record from being searched by model, manufacturer, or description.
+
+### `export`
+
+Writes the local catalog as CSV. By default, CSV is written to standard output; use `--output PATH` to write a file. The output path is created or overwritten, so choose it carefully.
+
+```bash
+python -m aircraft_explorer export
+python -m aircraft_explorer export --output aircraft.csv
+```
+
+The export uses only the local catalog and makes no network requests. Known fields appear first in a stable order; any additional fields present in records are included as extra columns. Missing values are represented by empty cells, and nested extra-field values are encoded as JSON text. An empty catalog still produces a CSV header.
 
 ### `stats`
 

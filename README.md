@@ -129,6 +129,19 @@ python -m aircraft_explorer discover --output /tmp/aircraft-candidates.json
 
 Discovery results are explicitly marked `verification_status: "discovered"` and classified as `model_candidate`, `individual_aircraft`, or `ambiguous`. Classification uses Wikidata class labels, descriptions, and identifier-shaped labels to flag likely serial numbers and registrations, and generic descriptions such as "aircraft" remain ambiguous. These are conservative heuristics, not proof of identity: review uncertain records against independent sources. All classes remain in `data/candidates.json` with classification reasons, while promotion blocks records classified as individual aircraft or ambiguous. The trusted `data/aircraft.json` catalog is not changed by discovery.
 
+### `cross-check`
+
+Compares the discovery candidate JSON against an aircraft metadata CSV that you obtained separately. It makes no network requests, requires no API key, and does not modify the trusted catalog or the input files.
+
+```bash
+python -m aircraft_explorer cross-check --metadata /path/to/aircraft-metadata.csv
+python -m aircraft_explorer cross-check --input data/candidates.json --metadata /path/to/aircraft-metadata.csv --output /tmp/cross-check.json
+```
+
+The report marks candidates as `corroborated`, `model_match_code_unknown`, `code_match_model_unconfirmed`, `conflict`, `multiple_matches`, or `no_match`. Matching is conservative: normalized model labels and ICAO type designators are compared when available; registration/serial identifiers are not treated as aircraft model names. The report retains matching rows and the conflicting fields for manual review.
+
+**Important:** a cross-check result is not a verified record and does not add evidence to `field_evidence` or enable promotion. OpenSky's aircraft metadata is described by OpenSky as unlicensed, potentially stale, and provided without guarantees. Check the dataset's current terms and permitted use before obtaining or using it. Do not commit or redistribute the dataset; provide a local CSV path yourself. The report records the CSV filename, not a dataset retrieval timestamp, because the tool cannot infer when the file was downloaded.
+
 ### `promote`
 
 Validates candidate evidence and writes only records marked `verified` to an output catalog. Every populated model, manufacturer, description, or ICAO designator must have field-level evidence from a source other than Wikidata, with an HTTPS URL and retrieval timestamp. Missing ICAO designators are allowed when the other populated fields are supported.

@@ -45,7 +45,7 @@ jobs:
         run: |
           python -m aircraft_explorer import-opensky \
             --metadata "$RUNNER_TEMP/aircraftDatabase.csv" \
-            --output data/aircraft.json \\
+            --output data/aircraft.json \
             --registry-dir data/registry
 
       - name: Validate generated catalog and registry shards

@@ -1,6 +1,5 @@
 """Tests for local aircraft metadata cross-checking."""
 
-import csv
 import json
 import tempfile
 import unittest

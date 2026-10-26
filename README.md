@@ -138,7 +138,7 @@ python -m aircraft_explorer cross-check --metadata /path/to/aircraft-metadata.cs
 python -m aircraft_explorer cross-check --input data/candidates.json --metadata /path/to/aircraft-metadata.csv --output /tmp/cross-check.json
 ```
 
-The report marks candidates as `corroborated`, `model_match_code_unknown`, `conflict`, `multiple_matches`, or `no_match`. Matching is conservative: normalized model labels and ICAO type designators are compared when available; registration/serial identifiers are not treated as aircraft model names. The report retains matching rows and the conflicting fields for manual review.
+The report marks candidates as `corroborated`, `model_match_code_unknown`, `code_match_model_unconfirmed`, `conflict`, `multiple_matches`, or `no_match`. Matching is conservative: normalized model labels and ICAO type designators are compared when available; registration/serial identifiers are not treated as aircraft model names. The report retains matching rows and the conflicting fields for manual review.
 
 **Important:** a cross-check result is not a verified record and does not add evidence to `field_evidence` or enable promotion. OpenSky's aircraft metadata is described by OpenSky as unlicensed, potentially stale, and provided without guarantees. Check the dataset's current terms and permitted use before obtaining or using it. Do not commit or redistribute the dataset; provide a local CSV path yourself. The report records the CSV filename, not a dataset retrieval timestamp, because the tool cannot infer when the file was downloaded.
 

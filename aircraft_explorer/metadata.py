@@ -22,14 +22,6 @@ def _header_key(value: str) -> str:
     return re.sub(r"[^a-z0-9]", "", value.casefold())
 
 
-def _first_value(row: dict[str, Any], aliases: tuple[str, ...]) -> str | None:
-    for alias in aliases:
-        value = row.get(alias)
-        if isinstance(value, str) and value.strip():
-            return value.strip()
-    return None
-
-
 def _normalize_model(value: Any) -> str:
     if not isinstance(value, str):
         return ""
@@ -152,8 +144,9 @@ def cross_check_candidates(
             status = "multiple_matches"
         elif conflicting_fields:
             status = "conflict"
-        elif "model" in matched_fields and (
-            "icao_type_designator" in matched_fields or not code_key
+        elif (
+            "model" in matched_fields
+            and "icao_type_designator" in matched_fields
         ):
             status = "corroborated"
         elif "model" in matched_fields:

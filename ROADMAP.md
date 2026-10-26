@@ -144,7 +144,7 @@ Further possibilities, subject to explicit user approval: optional desktop or we
 
 **Acceptance criteria:** candidates with and without designators can be discovered; unverified or Wikidata-only fields cannot be promoted; independently evidenced aircraft without designators are permitted; candidate discovery never overwrites the trusted catalog; failed or empty discovery does not overwrite existing output.
 
-**Status:** Phase 7 implementation was merged in PR [#4](https://github.com/MehdiAnti/AircraftCode-Explorer/pull/4). Discovery classification refinements are in a separate review PR. The checked-in aircraft catalog remains unchanged until candidate evidence has been verified.
+**Status:** Phase 7 implementation was merged in PR [#4](https://github.com/MehdiAnti/AircraftCode-Explorer/pull/4). Discovery classification refinements were merged in PR [#5](https://github.com/MehdiAnti/AircraftCode-Explorer/pull/5). The checked-in aircraft catalog remains unchanged until candidate evidence has been verified.
 
 
 ## Phase 8 — Local aircraft metadata cross-check

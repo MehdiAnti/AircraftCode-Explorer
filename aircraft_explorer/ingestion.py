@@ -36,6 +36,12 @@ def verification_issues(record: dict[str, Any]) -> list[str]:
     if record.get("verification_status") != "verified":
         issues.append("verification_status must be 'verified'")
 
+    classification = record.get("candidate_classification")
+    if "candidate_classification" in record and classification != "model_candidate":
+        issues.append(
+            f"candidate classification is '{classification}'; review and classify it as a model candidate before promotion"
+        )
+
     model = record.get("model")
     if not isinstance(model, str) or not model.strip():
         issues.append("model is required before a candidate can be promoted")

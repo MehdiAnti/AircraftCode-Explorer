@@ -29,16 +29,23 @@ ORDER BY ?icao
 LIMIT 5000
 """
 
-# Discovery intentionally includes aircraft entities without an ICAO designator.
-# Results remain candidates until independently verified; this is not a catalog query.
+# Discovery includes aircraft entities with and without ICAO designators.
+# Class labels help distinguish models from individual aircraft; all results remain candidates.
 DISCOVERY_QUERY = """
-SELECT DISTINCT ?item ?itemLabel ?itemDescription ?manufacturer ?manufacturerLabel ?icao
+SELECT ?item ?itemLabel ?itemDescription ?manufacturer ?manufacturerLabel ?icao
+       (GROUP_CONCAT(DISTINCT ?classLabel; separator="; ") AS ?classLabels)
 WHERE {
   ?item wdt:P31/wdt:P279* wd:Q11436.
   OPTIONAL { ?item wdt:P239 ?icao. }
   OPTIONAL { ?item wdt:P176 ?manufacturer. }
+  OPTIONAL {
+    ?item wdt:P31 ?instanceOf.
+    ?instanceOf rdfs:label ?classLabel.
+    FILTER(LANG(?classLabel) = "en")
+  }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
 }
+GROUP BY ?item ?itemLabel ?itemDescription ?manufacturer ?manufacturerLabel ?icao
 ORDER BY ?item
 LIMIT 5000
 """
@@ -213,6 +220,70 @@ def fetch_wikidata_aircraft(
 
 
 
+_GENERIC_DESCRIPTIONS = {
+    "aircraft", "airplane", "aeroplane", "helicopter", "plane", "military aircraft"
+}
+_INDIVIDUAL_DESCRIPTION = re.compile(
+    r"\b(serial (?:number )?of|registration of|tail number of|individual aircraft|"
+    r"aircraft that (?:collided|crashed|was|were|is|has)|aircraft involved in|"
+    r"aircraft destroyed in|aircraft lost in)\b",
+    re.IGNORECASE,
+)
+_IDENTIFIER_LABEL = re.compile(
+    r"^(?:\d{4,}(?:[-/][A-Z0-9]+)?|[A-Z0-9]{2,4}[-/][A-Z0-9]{2,8}|"
+    r"N\d{1,5}[A-Z]{0,2})$",
+    re.IGNORECASE,
+)
+
+
+def classify_aircraft_candidate(
+    model: str | None,
+    description: str | None,
+    class_labels: str | None = None,
+) -> tuple[str, list[str]]:
+    """Classify discovery candidates conservatively before verification.
+
+    This heuristic only triages candidates; it does not prove that an entity is
+    an aircraft model. Uncertain records are retained for manual review.
+    """
+    label = (model or "").strip()
+    summary = (description or "").strip()
+    classes = (class_labels or "").casefold()
+    summary_lower = summary.casefold()
+    reasons: list[str] = []
+
+    if _INDIVIDUAL_DESCRIPTION.search(summary):
+        return "individual_aircraft", [
+            "Description indicates a specific aircraft, serial number, or incident."
+        ]
+
+    if any(term in classes for term in (
+        "aircraft model", "airplane model", "helicopter model",
+        "aircraft family", "aircraft type",
+    )):
+        return "model_candidate", [
+            "Wikidata instance class identifies a model, family, or type; independent verification is still required."
+        ]
+
+    if not label:
+        return "ambiguous", ["Missing model label."]
+
+    if _IDENTIFIER_LABEL.fullmatch(label) and any(char.isdigit() for char in label):
+        return "ambiguous", [
+            "Label resembles an aircraft registration or serial identifier rather than a model name."
+        ]
+
+    if not summary or summary_lower in _GENERIC_DESCRIPTIONS:
+        return "ambiguous", [
+            "Description is missing or too generic to distinguish a model from an individual aircraft."
+        ]
+
+    reasons.append(
+        "No strong individual-aircraft indicator detected; confirm model identity against independent sources."
+    )
+    return "model_candidate", reasons
+
+
 def parse_wikidata_candidates(
     payload: dict[str, Any],
     *,
@@ -301,9 +372,14 @@ def parse_wikidata_candidates(
                 "source_url": record["source_url"],
                 "retrieved_at": timestamp,
             }]
-        class_label = _binding_value(binding, "classLabel")
-        if class_label:
-            record["candidate_kind"] = class_label.strip()
+        class_labels = _binding_value(binding, "classLabels") or _binding_value(binding, "classLabel")
+        if class_labels:
+            record["candidate_kind"] = class_labels.strip()
+        classification, reasons = classify_aircraft_candidate(
+            model, description, class_labels
+        )
+        record["candidate_classification"] = classification
+        record["classification_reasons"] = reasons
         records.append(normalize_record(record))
 
     if diagnostics is not None and skipped:

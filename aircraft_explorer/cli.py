@@ -138,7 +138,24 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 2
         for message in diagnostics:
             print(f"warning: {message}", file=sys.stderr)
-        print(f"Discovered {len(records)} candidate record(s); catalog unchanged.")
+        model_candidates = sum(
+            record.get("candidate_classification") == "model_candidate"
+            for record in records
+        )
+        individual_aircraft = sum(
+            record.get("candidate_classification") == "individual_aircraft"
+            for record in records
+        )
+        ambiguous = sum(
+            record.get("candidate_classification") == "ambiguous"
+            for record in records
+        )
+        print(
+            f"Discovered {len(records)} candidate record(s): "
+            f"{model_candidates} model candidate(s), "
+            f"{individual_aircraft} individual aircraft, "
+            f"{ambiguous} ambiguous; catalog unchanged."
+        )
         return 0
 
     if args.command == "promote":

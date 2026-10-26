@@ -127,7 +127,7 @@ python -m aircraft_explorer discover
 python -m aircraft_explorer discover --output /tmp/aircraft-candidates.json
 ```
 
-Discovery results are explicitly marked `verification_status: "discovered"`. Wikidata evidence records where a value was found, but is not independent verification. The query may include aircraft entities that still require classification; review candidates before promotion.
+Discovery results are explicitly marked `verification_status: "discovered"` and classified as `model_candidate`, `individual_aircraft`, or `ambiguous`. Classification uses Wikidata class labels, descriptions, and identifier-shaped labels to flag likely serial numbers and registrations, and generic descriptions such as "aircraft" remain ambiguous. These are conservative heuristics, not proof of identity: review uncertain records against independent sources. All classes remain in `data/candidates.json` with classification reasons, while promotion blocks records classified as individual aircraft or ambiguous. The trusted `data/aircraft.json` catalog is not changed by discovery.
 
 ### `promote`
 
@@ -167,7 +167,11 @@ The catalog file is `data/aircraft.json` by default and contains a JSON list of 
 - `source`: source name
 - `source_id`: stable identifier assigned by the source
 - `source_url`: URL for the source entity
-- `source_retrieved_at`: UTC retrieval timestamp\n- `verification_status`: discovery/verification state (for example, `discovered` or `verified`)\n- `field_evidence`: mapping of factual fields to source name, HTTPS URL, and retrieval timestamp; Wikidata-only evidence is not sufficient for promotion
+- `source_retrieved_at`: UTC retrieval timestamp
+- `verification_status`: discovery/verification state (for example, `discovered` or `verified`)
+- `field_evidence`: mapping of factual fields to source name, HTTPS URL, and retrieval timestamp; Wikidata-only evidence is not sufficient for promotion
+- `candidate_classification`: discovery triage result (`model_candidate`, `individual_aircraft`, or `ambiguous`)
+- `classification_reasons`: reasons for the discovery classification
 
 An illustrative schema-only record is shown below. Its placeholder values are not real aircraft data and should not be copied into the catalog as a factual record:
 

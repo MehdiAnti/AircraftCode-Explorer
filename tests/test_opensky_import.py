@@ -45,7 +45,7 @@ class OpenSkyImportTests(unittest.TestCase):
             self.assertTrue((Path(directory) / "registration" / "n1.json.gz").exists())
             self.assertTrue((Path(directory) / "typecode" / "c1.json.gz").exists())
             self.assertTrue((Path(directory) / "operator" / "ex.json.gz").exists())
-            with gzip.open(Path(directory) / "registration" / "n.json.gz", "rt", encoding="utf-8") as file:
+            with gzip.open(Path(directory) / "registration" / "n1.json.gz", "rt", encoding="utf-8") as file:
                 records = json.load(file)
             self.assertEqual(len(records), 2)
             self.assertEqual(records[0]["registration"], "N123AB")

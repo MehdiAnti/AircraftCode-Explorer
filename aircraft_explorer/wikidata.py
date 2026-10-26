@@ -7,7 +7,7 @@ import re
 import time
 from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, urlopen
 from typing import Any, Callable
 
@@ -35,7 +35,10 @@ class WikidataError(RuntimeError):
 
 
 def _binding_value(binding: dict[str, Any], key: str) -> str | None:
-    value = binding.get(key, {}).get("value")
+    entry = binding.get(key)
+    if not isinstance(entry, dict):
+        return None
+    value = entry.get("value")
     return value if isinstance(value, str) and value.strip() else None
 
 
@@ -119,8 +122,15 @@ def parse_wikidata_response(
         if not item_uri:
             skipped += 1
             continue
-        source_id = item_uri.rstrip("/").rsplit("/", 1)[-1]
-        if not source_id.startswith("Q") or not source_id[1:].isdigit():
+        parsed_uri = urlsplit(item_uri)
+        source_id = parsed_uri.path.rstrip("/").rsplit("/", 1)[-1]
+        if (
+            parsed_uri.scheme not in {"http", "https"}
+            or parsed_uri.hostname not in {"wikidata.org", "www.wikidata.org"}
+            or not parsed_uri.path.startswith("/entity/")
+            or not source_id.startswith("Q")
+            or not source_id[1:].isdigit()
+        ):
             skipped += 1
             continue
 

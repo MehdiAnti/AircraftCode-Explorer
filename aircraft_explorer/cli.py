@@ -11,6 +11,7 @@ from typing import Sequence
 from .core import (
     DEFAULT_DATA_PATH,
     catalog_stats,
+    catalog_status,
     load_aircraft,
     save_aircraft,
     search_aircraft,
@@ -53,6 +54,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     stats_parser = subparsers.add_parser("stats", help="Show catalog statistics.")
     stats_parser.add_argument("--json", action="store_true", help="Print JSON statistics.")
+
+    status_parser = subparsers.add_parser(
+        "status", help="Show catalog quality, sources, and retrieval freshness."
+    )
+    status_parser.add_argument("--json", action="store_true", help="Print JSON status.")
 
     export_parser = subparsers.add_parser("export", help="Export the catalog as CSV.")
     export_parser.add_argument(
@@ -126,6 +132,30 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"Aircraft records: {result['aircraft']}")
             print(f"With ICAO designator: {result['with_icao_type_designator']}")
             print(f"Manufacturers: {result['manufacturers']}")
+        return 0
+
+    if args.command == "status":
+        result = catalog_status(aircraft)
+        if args.json:
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+        else:
+            print(f"Aircraft records: {result['aircraft']}")
+            print(f"With ICAO designator: {result['with_icao_type_designator']}")
+            print(f"Missing ICAO designator: {result['missing_icao_type_designator']}")
+            print(f"Manufacturers: {result['manufacturers']}")
+            print("Records by source:")
+            for source, count in result["sources"].items():
+                print(f"  {source}: {count}")
+            print(f"With retrieval timestamp: {result['with_retrieval_timestamp']}")
+            print(f"Missing retrieval timestamp: {result['missing_retrieval_timestamp']}")
+            print(f"Invalid retrieval timestamp: {result['invalid_retrieval_timestamp']}")
+            if result["latest_retrieved_at"] is None:
+                print("Latest retrieval: Unknown (no valid retrieval timestamps)")
+                print("Latest retrieval age: Unknown")
+            else:
+                print(f"Oldest retrieval (UTC): {result['oldest_retrieved_at']}")
+                print(f"Latest retrieval (UTC): {result['latest_retrieved_at']}")
+                print(f"Latest retrieval age (days): {result['latest_retrieval_age_days']}")
         return 0
 
     if args.command == "export":

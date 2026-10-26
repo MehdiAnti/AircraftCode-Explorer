@@ -52,13 +52,13 @@ Build a maintainable aircraft catalog and explorer that supports searching by IC
 
 ## Phase 3 — legacy source data refresh
 
-**Goal:** Provide an explicit command that fetches candidate aircraft records from legacy source and writes a local catalog.
+**Historical goal:** Provide a network refresh command. This workflow was retired in Phase 10; the supported data-ingestion path is now the local CSV importer.
 
 **Implemented:** SPARQL refresh command, timeout/User-Agent/retries, atomic writes, empty-result protection, provenance fields, mocked tests, and documentation.
 
 **Verification:** GitHub Actions run [#14](https://github.com/MehdiAnti/AircraftCode-Explorer/actions/runs/40339675455) passed all four Python 3.10–3.13 jobs with 27 tests each. Tests used mocked responses; no live legacy source refresh was run.
 
-**Status:** Complete and user-approved.
+**Status:** Historical implementation completed; the network refresh command was retired in Phase 10.
 
 ## Phase 4 — Data quality, normalization, and provenance
 

@@ -1,64 +1,154 @@
 # AircraftCode-Explorer
 
-A small Python command-line tool for exploring aircraft by ICAO type designator, model, and manufacturer.
+AircraftCode-Explorer is a small Python command-line tool for searching a local aircraft catalog by ICAO type designator, model, manufacturer, or description. It can also explicitly refresh the catalog with candidate records from Wikidata.
 
-## Project status and roadmap
-
-The project is developed in reviewable phases. See [ROADMAP.md](ROADMAP.md) for the full plan, current phase statuses, acceptance criteria, working rules, and completion log. Each phase is reviewed with the user before the next phase begins.
+> **Data caution:** Wikidata is community-maintained and is not an authoritative ICAO register. This tool does not independently verify designators or infer missing codes. Verify data against an authoritative source before operational use.
 
 ## Requirements
 
 - Python 3.10 or newer
-- No third-party Python packages required
+- Git, if you are cloning the repository
+- No third-party Python packages are required
 
-## Usage
+## Get started
 
-Run commands from the repository root:
+Clone the repository and change into its directory:
+
+```bash
+git clone https://github.com/MehdiAnti/AircraftCode-Explorer.git
+cd AircraftCode-Explorer
+```
+
+Run commands from the repository root. There is no package installation step yet; the project can be run directly from the checkout.
+
+Check the catalog summary:
 
 ```bash
 python -m aircraft_explorer stats
-python -m aircraft_explorer search C172
-python -m aircraft_explorer search --manufacturer Cessna
 ```
 
-### Refresh the local catalog
+Search the local catalog:
 
-Run the refresh explicitly; ordinary searches do not access the network:
+```bash
+python -m aircraft_explorer search C172
+python -m aircraft_explorer search --manufacturer Cessna
+python -m aircraft_explorer search --model "Skyhawk"
+python -m aircraft_explorer search --icao C172
+```
+
+The current checked-in catalog may be empty. An empty catalog is valid during development, so searches may return no results until data is added or refreshed.
+
+## Command reference
+
+### Global option
+
+- `--data PATH`: read or write a catalog at a different path. Put this option **before** the subcommand.
+
+For example:
+
+```bash
+python -m aircraft_explorer --data /tmp/aircraft.json stats
+python -m aircraft_explorer --data /tmp/aircraft.json search C172
+python -m aircraft_explorer --data /tmp/aircraft.json update
+```
+
+### `search`
+
+Searches the local JSON catalog only; it does not make network requests.
+
+```bash
+python -m aircraft_explorer search [QUERY] [--manufacturer NAME] [--model NAME] [--icao CODE] [--json]
+```
+
+- `QUERY`: optional case-insensitive substring searched across designator, model, manufacturer, and description.
+- `--manufacturer NAME`: restrict results to matching manufacturer text.
+- `--model NAME`: restrict results to matching model text.
+- `--icao CODE`: restrict results to matching ICAO type designator text.
+- `--json`: print results as JSON instead of the human-readable list.
+
+When multiple filters are supplied, all supplied filters must match. Missing designators do not prevent a record from being searched by model, manufacturer, or description.
+
+### `stats`
+
+Shows the number of records, records with a designator, and distinct non-empty manufacturers.
+
+```bash
+python -m aircraft_explorer stats
+python -m aircraft_explorer stats --json
+```
+
+### `update`
+
+Refreshes the local catalog explicitly from Wikidata. Ordinary `search` and `stats` commands never access the network.
 
 ```bash
 python -m aircraft_explorer update
+python -m aircraft_explorer update --timeout 30 --retries 2
 ```
 
-Options:
+- `--timeout SECONDS`: request timeout; defaults to 20 seconds and must be greater than zero.
+- `--retries COUNT`: retry attempts for transient failures; defaults to 3 and accepts values from 0 through 5.
+- `--allow-empty`: permit an empty result to replace the current catalog. Use this only when that replacement is intentional.
 
-- `--timeout 20`: request timeout in seconds (default 20).
-- `--retries 3`: retries after transient errors (default 3; maximum 5).
-- `--allow-empty`: explicitly allow an empty result to replace the catalog. By default, an empty response leaves the existing catalog untouched.
-- Global `--data PATH`: use a different catalog file, for example `python -m aircraft_explorer --data /tmp/aircraft.json update`.
+The updater queries Wikidata's SPARQL endpoint for items with the ICAO aircraft type designator property. Requests use a descriptive User-Agent, a timeout, and bounded exponential backoff for network errors and HTTP 429/5xx responses. Malformed or incomplete rows are skipped and summarized in a warning. A successful result is written through a temporary file and atomically replaces the target catalog. By default, a response with zero usable records is refused, leaving the existing catalog untouched.
 
-The update command queries Wikidata's SPARQL endpoint for items with an ICAO aircraft type designator. Requests use a timeout, a descriptive User-Agent, and bounded exponential backoff for transient network errors and HTTP 429/5xx responses. The parser skips malformed or incomplete rows and prints a warning with the number skipped. The catalog is replaced atomically only after a valid response has been parsed.
+**Back up any hand-maintained catalog before running `update`:** a successful update replaces the target file with the fetched result; it does not merge it with the previous catalog.
 
 ## Data format and provenance
 
-Records may include:
+The catalog file is `data/aircraft.json` by default and contains a JSON list of record objects. Known fields are strings or `null`:
 
-- `icao_type_designator`: designator supplied by Wikidata (not independently verified by this tool)
-- `model`: item label
+- `icao_type_designator`: designator supplied by the source; not independently verified by this tool
+- `model`: source item label
 - `manufacturer`: manufacturer label, when available
-- `description`: Wikidata description, when available
+- `description`: source description, when available
 - `source`: source name
-- `source_id`: stable Wikidata entity identifier
-- `source_url`: link to the source entity
-- `source_retrieved_at`: UTC timestamp for when the response was retrieved
+- `source_id`: stable identifier assigned by the source
+- `source_url`: URL for the source entity
+- `source_retrieved_at`: UTC retrieval timestamp
 
-Wikidata is community-maintained and is not a guarantee of complete or authoritative ICAO data. This initial query includes only items that have the Wikidata ICAO type designator property; aircraft without that property are not returned by refresh. Local records without a designator are still valid and searchable by model or manufacturer. The tool does not infer or fabricate ICAO codes. The designator field is sourced from Wikidata and is not independently verified here; missing values remain unknown. Model, manufacturer, and description are source labels, not independently verified facts. No designator is inferred by the application. Verify designators against an authoritative source before operational use.
+An illustrative schema-only record is shown below. Its placeholder values are not real aircraft data and should not be copied into the catalog as a factual record:
+
+```json
+[
+  {
+    "icao_type_designator": null,
+    "model": "Example model (placeholder only)",
+    "manufacturer": null,
+    "description": null,
+    "source": "example-source",
+    "source_id": "example-id",
+    "source_url": "https://example.org/entity/example-id",
+    "source_retrieved_at": null
+  }
+]
+```
+
+The loader normalizes whitespace in known text fields and uppercases designators. It validates the top-level list, record objects, and known field types. Records with the same source identity are deduplicated; a conservative fallback is used only when designator, model, and manufacturer are all present. Missing values remain unknown. Unknown source-specific fields are preserved.
+
+The initial Wikidata query only returns items that have the Wikidata ICAO type designator property, so aircraft without that property will not be returned by refresh. Model, manufacturer, and description values are source labels, not independently verified facts. The application does not infer or fabricate ICAO codes.
 
 ## Development and tests
 
-Run the tests without network access:
+Run the standard-library test suite from the repository root:
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-The Wikidata client and update command are tested with mocked responses; tests do not query the live SPARQL endpoint.
+The tests use mocked Wikidata responses and do not need live network access. GitHub Actions runs the suite on Python 3.10, 3.11, 3.12, and 3.13 for pushes to `main` and pull requests.
+
+Before submitting a change, run the test command above and review the output. See [ROADMAP.md](ROADMAP.md) for phase status and [RELEASE.md](RELEASE.md) for versioning and release guidance.
+
+## Troubleshooting
+
+- **`No matching aircraft found.`** The local catalog may be empty, or no record matches the supplied text and filters. Check `python -m aircraft_explorer stats` and the selected `--data` path.
+- **`Aircraft catalog must contain a JSON list`** The catalog's top level must be a JSON array (`[]` or a list of record objects).
+- **A record field must be a string or null.** One of the known fields contains a number, boolean, array, or object. Correct the JSON value and try again.
+- **`Wikidata returned zero usable records`** The updater intentionally protects the existing catalog. Check connectivity and the upstream response first. Only pass `--allow-empty` if replacing the catalog with an empty list is intended.
+- **Network or HTTP errors during update.** The updater retries transient failures a limited number of times. Retry later if the endpoint is unavailable; the existing catalog is not replaced when fetching or parsing fails.
+- **An update replaced local records.** The update command refreshes the target catalog rather than merging it. Restore a backup if needed, or use a separate file with `--data PATH` when testing a refresh.
+
+## License status
+
+No project license has been selected or included yet. Until the repository owner confirms the intended license and adds the corresponding license file, do not assume that the code is offered under a particular open-source license. See [RELEASE.md](RELEASE.md) for the pre-release checklist.

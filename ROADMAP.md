@@ -1,6 +1,6 @@
 # Project Roadmap
 
-This file is the source of truth for project phases, current progress, and phase-by-phase approval. Keep it updated as work is completed so future contributors and AI coding sessions can recognize the project state without relying on chat history.
+This file is the source of truth for project phases, current progress, and phase-by-phase approval. Keep it updated so future contributors and AI coding sessions can recognize the project state without relying on chat history.
 
 ## Project goal
 
@@ -9,144 +9,96 @@ Build a maintainable aircraft catalog and explorer that supports searching by IC
 ## Working rules
 
 - Work only in `MehdiAnti/AircraftCode-Explorer`.
-- Implement one phase at a time.
-- After each phase, report files changed, checks actually run, known limitations, and the relevant commit(s).
+- Implement one phase at a time, on a dedicated branch.
+- Group each phase into one pull request for review; do not commit phase changes directly to `main`.
+- After each phase, report files changed, checks actually run, known limitations, and the pull request.
 - Stop and ask the user to review and approve before starting the next phase.
 - Never claim tests or workflows passed unless they were actually run and the result was observed.
 - Prefer Python's standard library unless a dependency has a clear benefit.
 - Never invent ICAO type designators. Preserve source/provenance information and distinguish source data from independently verified facts.
 - Treat Wikidata as a useful community-maintained source, not as a complete or authoritative ICAO register.
+- Do not select a project license or create a license file without the repository owner's confirmation.
 
 ## Phase status
 
 | Phase | Name | Status |
 |---|---|---|
 | 1 | Repository foundation and local catalog CLI | Complete; execution not yet independently verified |
-| 2 | Unit tests and continuous integration | Verified — 14 tests passed on Python 3.10–3.13; awaiting user review |
+| 2 | Unit tests and continuous integration | Verified — 14 tests passed on Python 3.10–3.13; user review status previously recorded |
 | 3 | Wikidata data refresh | Complete — verified and approved by user |
-| 4 | Data quality, normalization, and provenance | Verified — 34 tests passed on Python 3.10–3.13; awaiting user review |
-| 5 | Documentation and release readiness | Planned |
+| 4 | Data quality, normalization, and provenance | Complete — verified and approved by user |
+| 5 | Documentation and release readiness | In progress — branch `phase-5-documentation-release-readiness`; awaiting CI and user review |
 | 6 | Optional usability improvements | Planned |
 
 ## Phase 1 — Repository foundation and local catalog CLI
 
 **Goal:** Establish the initial package, data format, and command-line interface.
 
-Deliverables:
-- `README.md` with setup and usage instructions.
-- `.gitignore` for Python artifacts.
-- `aircraft_explorer/` Python package.
-- JSON catalog at `data/aircraft.json`.
-- Search by general text, manufacturer, model, and ICAO type designator.
-- Basic catalog statistics.
+**Deliverables:** `README.md`, `.gitignore`, `aircraft_explorer/`, `data/aircraft.json`, search by text/manufacturer/model/designator, and basic statistics.
 
-**Acceptance criteria:**
-- The package can be invoked with `python -m aircraft_explorer`.
-- Search and statistics operate on the local JSON catalog.
-- Missing catalog files return an empty catalog; malformed data is reported clearly.
+**Acceptance criteria:** The module can be invoked with `python -m aircraft_explorer`; search and statistics operate on the local JSON catalog; missing catalog files return an empty catalog and malformed data is reported clearly.
 
-**Status:** Complete. The files were committed to the `main` branch. Execution has not yet been independently verified.
+**Status:** Complete. The files were committed to `main`; execution has not been independently verified in this chat.
 
 ## Phase 2 — Unit tests and continuous integration
 
 **Goal:** Add repeatable automated checks before introducing network-dependent data fetching.
 
-Deliverables:
-- Unit tests for catalog loading, validation, search filters, and statistics.
-- GitHub Actions workflow that runs tests on pushes and pull requests.
-- A documented local test command.
+**Implemented:** Standard-library unit tests; GitHub Actions on Python 3.10–3.13 for pushes, pull requests, and manual dispatch; documented local test command.
 
-**Implemented:**
-- `tests/test_core.py` covers loading, missing files, invalid JSON shapes/records, case-insensitive search, description search, filters, combined filters, no matches, and statistics.
-- `.github/workflows/tests.yml` runs the standard-library unittest suite on Python 3.10–3.13 for pushes to `main`, pull requests, and manual dispatch.
-- `README.md` documents the test command and links this roadmap.
-
-**Acceptance criteria:**
-- Tests cover successful loads, missing files, invalid top-level JSON shape, invalid records, search matching, filtering, and statistics.
-- CI uses supported Python versions and runs without third-party runtime dependencies.
-- Report the actual test result. If tests cannot be executed in the current environment, state that clearly.
-
-**Verification results (2026-10-26):** GitHub Actions run [#3](https://github.com/MehdiAnti/AircraftCode-Explorer/actions/runs/40335663823) completed successfully for commit `9cdb7b47ef5643762c52d3e5e39b13e14a8ec2eb`. All four matrix jobs (Python 3.10, 3.11, 3.12, and 3.13) completed successfully. The Python 3.10 job log confirms `Ran 14 tests` and `OK`; the other three jobs also report the test step succeeded. The tests were run by GitHub Actions on the committed repository, not in this chat's local runtime.
-
-**Status:** Implementation and CI verification complete. Awaiting user review/approval before Phase 3.
+**Verification:** GitHub Actions run [#3](https://github.com/MehdiAnti/AircraftCode-Explorer/actions/runs/40335663823) passed all four matrix jobs; the Python 3.10 log confirmed 14 tests and `OK`.
 
 ## Phase 3 — Wikidata data refresh
 
 **Goal:** Provide an explicit command that fetches candidate aircraft records from Wikidata and writes a local catalog.
 
-**Implemented:**
-- `aircraft_explorer/wikidata.py` queries Wikidata SPARQL for entities with the P239 ICAO type designator property.
-- The request has a 20-second default timeout, a descriptive User-Agent, bounded exponential backoff, and up to three retries for network errors and HTTP 429/5xx responses.
-- The `update` CLI command accepts `--timeout`, `--retries` (0–5), `--allow-empty`, and global `--data`.
-- Catalog output is serialized to a temporary file and atomically replaced only after a successful response and parse. Empty results are refused by default.
-- Records retain Wikidata source name, entity ID, source URL, retrieval timestamp, labels, manufacturer, description, and the supplied designator.
-- The parser deduplicates by Wikidata entity ID and rejects malformed designators rather than importing them.
-- Mocked tests cover parsing/provenance, retry behavior, retry limits, input validation, successful update, network-failure preservation, and empty-result protection.
-- `README.md` documents refresh usage and source limitations.
+**Implemented:** SPARQL refresh command, timeout/User-Agent/retries, atomic writes, empty-result protection, provenance fields, mocked tests, and documentation.
 
-**Acceptance criteria:**
-- The refresh command is separate from ordinary local searches.
-- Network failures leave the existing catalog intact.
-- Results include source provenance.
-- Mocked tests do not depend on live network access.
+**Verification:** GitHub Actions run [#14](https://github.com/MehdiAnti/AircraftCode-Explorer/actions/runs/40339675455) passed all four Python 3.10–3.13 jobs with 27 tests each. Tests used mocked responses; no live Wikidata refresh was run.
 
-**Verification results (2026-10-26):** An earlier run [#10](https://github.com/MehdiAnti/AircraftCode-Explorer/actions/runs/40338329794) failed because the tested commit predated the malformed-designator validation. The parser fix was subsequently verified in run [#11](https://github.com/MehdiAnti/AircraftCode-Explorer/actions/runs/40338582604). A dedicated regression test was then added in commit `648730bdeaf362cc2f3ae5d116ffa0df43467ba1`. GitHub Actions run [#14](https://github.com/MehdiAnti/AircraftCode-Explorer/actions/runs/40339675455) completed successfully on that commit. All four matrix jobs (Python 3.10, 3.11, 3.12, and 3.13) succeeded, each running 27 tests and reporting `OK`, including `test_malformed_icao_designator_is_rejected`. Tests used mocked responses and did not query live Wikidata.
-
-**Status:** Complete. Implementation and CI verification passed; the user approved Phase 3 before Phase 4 began.
+**Status:** Complete and user-approved.
 
 ## Phase 4 — Data quality, normalization, and provenance
 
 **Goal:** Make refreshed records easier to trust and maintain.
 
-**Implemented:**
-- Normalizes whitespace across known text fields and uppercases ICAO type designators for consistent comparisons.
-- Deduplicates by normalized source identity when available; otherwise uses a conservative fallback only when designator, model, and manufacturer are all present.
-- Merges missing fields from duplicate records without replacing existing non-empty values; preserves source URLs, IDs, retrieval timestamps, and unknown source-specific fields.
-- Validates JSON catalog shape and known field types. Wikidata parsing safely skips malformed bindings, invalid or untrusted entity URLs, missing identifiers, and malformed designators.
-- Reports the count of skipped Wikidata rows through CLI warnings.
-- Adds regression tests for duplicate records, normalization, missing designators, invalid field types, skipped rows, and unusual source response shapes.
-- Documents sourced fields, missing/unknown values, and the fact that the application does not infer or fabricate ICAO codes.
+**Implemented:** Whitespace normalization, uppercase designators, deterministic deduplication, source identity preservation, conservative fallback identity, catalog field validation, safe handling and diagnostics for malformed Wikidata rows, regression tests, and provenance documentation.
 
-**Verification results (2026-10-26):** GitHub Actions run [#27](https://github.com/MehdiAnti/AircraftCode-Explorer/actions/runs/40342033600) completed successfully on commit 6b934930e09d194d357b2c66c409212e2c39f6bb. All four matrix jobs (Python 3.10, 3.11, 3.12, and 3.13) succeeded. The Python 3.10 log confirms 34 tests ran; the other matrix jobs also succeeded. Tests use mocked source responses; no live Wikidata refresh was run. The local catalog data/aircraft.json remains empty ([]), as requested.
+**Verification:** GitHub Actions run [#27](https://github.com/MehdiAnti/AircraftCode-Explorer/actions/runs/40342033600) passed all four Python 3.10–3.13 jobs; the Python 3.10 log confirmed 34 tests. Tests used mocked source responses; no live refresh was run. The checked-in `data/aircraft.json` remains `[]`, as requested.
 
-**Status:** Implementation and CI verification complete. Awaiting user review/approval before Phase 5.
+**Status:** Complete and user-approved.
 
 ## Phase 5 — Documentation and release readiness
 
-**Goal:** Make the project understandable and usable by a new contributor.
+**Goal:** Make the project understandable and usable by a new contributor, and document release prerequisites without making owner-only decisions.
 
-Planned deliverables:
-- Complete install, usage, update, troubleshooting, and test instructions.
-- Example commands and example JSON records.
-- License decision and license file, only after the intended license is confirmed.
-- Versioning/release notes guidance.
-- Review of error messages and CLI help text.
+**Deliverables:**
+- Clear checkout/setup instructions, command reference, examples, data format, and troubleshooting.
+- A schema-only JSON example clearly marked as placeholders, not real aircraft data.
+- Versioning and release notes guidance.
+- A release checklist and explicit unresolved license decision.
+- Review of CLI help text against documented behavior.
 
 **Acceptance criteria:**
 - A new user can follow the README from a clean checkout.
-- All documented commands match the implemented CLI.
-- License and data-source attribution are explicit.
+- Documented commands match the implemented CLI.
+- License status and data-source attribution are explicit.
+- CI passes for all supported Python versions.
+
+**Status:** In progress on `phase-5-documentation-release-readiness`; results and PR link will be added after checks run.
 
 ## Phase 6 — Optional usability improvements
 
 **Goal:** Consider enhancements after the core catalog and refresh flow are reliable.
 
-Possible items, prioritized with user approval:
-- CSV export.
-- More structured filters and sorting.
-- Catalog freshness/status command.
-- Optional desktop or web interface.
-- Packaging for installation as a command.
-- Additional source adapters, if licensing and data quality permit.
+Possible items, subject to explicit user approval: CSV export; structured filters and sorting; catalog freshness/status command; optional desktop or web interface; packaging; additional source adapters if licensing and data quality permit.
 
-**Acceptance criteria:**
-- Each enhancement is proposed before implementation.
-- The project remains usable without optional features.
-- Dependencies and maintenance costs are justified.
+Each enhancement must be proposed before implementation, and the project must remain usable without optional features.
 
-## Phase completion log
+## Completion log
 
-- **Phase 1:** Foundation files committed. Local execution not yet verified.
-- **Phase 2:** Test suite, CI workflow, README roadmap link, and roadmap status update committed. GitHub Actions run #3 passed all 14 tests across Python 3.10–3.13; user approved Phase 3.
-- **Phase 3:** Wikidata refresh, atomic catalog replacement, provenance, CLI options, mocked tests, and documentation committed. Added a dedicated malformed-designator regression test. GitHub Actions run #14 passed all 27 tests on Python 3.10–3.13. User approved Phase 3 before Phase 4.
-- **Phase 4:** Normalization, deterministic deduplication, conservative fallback identity, catalog field validation, safe Wikidata row parsing, skipped-row warnings, regression tests, and provenance documentation committed. GitHub Actions run #27 passed all 34 tests on Python 3.10–3.13. The local catalog remains empty ([]). Awaiting user approval before Phase 5.
+- **Phase 1:** Foundation files committed; local execution not independently verified.
+- **Phase 2:** Test suite and CI committed; run #3 passed 14 tests on Python 3.10–3.13.
+- **Phase 3:** Wikidata refresh, provenance, CLI options, mocked tests, and documentation committed; run #14 passed 27 tests on Python 3.10–3.13; user approved.
+- **Phase 4:** Normalization, deterministic deduplication, validation, diagnostics, tests, and provenance docs committed; run #27 passed 34 tests on Python 3.10–3.13; user approved.
+- **Phase 5:** Documentation and release-readiness guidance are being prepared on a dedicated branch for review through one pull request. No license has been selected, no release tag has been created, and the catalog data remains untouched.

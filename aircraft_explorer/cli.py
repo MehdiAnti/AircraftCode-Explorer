@@ -17,16 +17,16 @@ from .core import (
     search_aircraft,
 )
 from .csv_export import write_csv
-from .ingestion import verified_records
+from .ingestion import verify_record
 from .metadata import MetadataError, cross_check_candidates, load_metadata_csv, write_cross_check_report
+from .review import catalog_review, write_review_report
 from .opensky_import import OpenSkyImportError, import_opensky_csv, merge_opensky_records
-from .wikidata import WikidataError, fetch_wikidata_aircraft, fetch_wikidata_candidates
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="aircraft-explorer",
-        description="Search and refresh a local catalog of aircraft.",
+        description="Search, review, and maintain a local aircraft catalog.",
     )
     parser.add_argument(
         "--data",
@@ -70,20 +70,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Output CSV path; use '-' or omit to write to standard output.",
     )
 
-    discover_parser = subparsers.add_parser(
-        "discover", help="Discover broad Wikidata aircraft candidates without changing the catalog."
-    )
-    discover_parser.add_argument(
-        "--output", default="data/candidates.json",
-        help="Candidate JSON path (default: data/candidates.json)."
-    )
-    discover_parser.add_argument(
-        "--timeout", type=float, default=20.0, help="Request timeout in seconds."
-    )
-    discover_parser.add_argument(
-        "--retries", type=int, default=3, help="Retries after transient errors (0-5)."
-    )
-
     cross_check_parser = subparsers.add_parser(
         "cross-check",
         help="Compare candidate records against a locally supplied aircraft metadata CSV.",
@@ -117,32 +103,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show proposed import counts without writing the catalog.",
     )
 
-    promote_parser = subparsers.add_parser(
-        "promote", help="Write only independently verified candidates to a catalog."
-    )
-    promote_parser.add_argument(
-        "--input", default="data/candidates.json", help="Candidate JSON path."
-    )
-    promote_parser.add_argument(
-        "--output", default="data/verified-aircraft.json",
-        help="Output catalog path; defaults to a separate file, not data/aircraft.json."
-    )
+    review_parser = subparsers.add_parser("review", help="Summarize verification states and ICAO type-code conflicts.")
+    review_parser.add_argument("--json", action="store_true", help="Print the full review report as JSON.")
+    review_parser.add_argument("--output", default=None, help="Optional path to save the JSON review report.")
 
-    update_parser = subparsers.add_parser(
-        "update",
-        help="Fetch candidate aircraft records from Wikidata and replace the local catalog.",
-    )
-    update_parser.add_argument(
-        "--timeout", type=float, default=20.0, help="Request timeout in seconds."
-    )
-    update_parser.add_argument(
-        "--retries", type=int, default=3, help="Retries after transient errors (0-5)."
-    )
-    update_parser.add_argument(
-        "--allow-empty",
-        action="store_true",
-        help="Allow an empty response to replace the catalog (default: refuse).",
-    )
+    verify_parser = subparsers.add_parser("verify", help="Mark one record verified after independent manual source review.")
+    verify_parser.add_argument("--model", required=True, help="Exact model name from the catalog.")
+    verify_parser.add_argument("--icao", default=None, help="Optional ICAO designator to disambiguate.")
+    verify_parser.add_argument("--source-name", required=True, help="Independent source reviewed by you.")
+    verify_parser.add_argument("--source-url", required=True, help="HTTPS URL supporting the populated fields.")
+    verify_parser.add_argument("--retrieved-at", required=True, help="ISO-8601 source review timestamp.")
+    verify_parser.add_argument("--confirm", action="store_true", help="Confirm you manually checked the source supports every populated factual field.")
+    verify_parser.add_argument("--confirm-conflict", action="store_true", help="Allow verification of a conflicting code after manual resolution.")
+
     return parser
 
 
@@ -151,68 +124,27 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     data_path = args.data or DEFAULT_DATA_PATH
 
-    if args.command == "discover":
-        if args.timeout <= 0:
-            parser.error("--timeout must be greater than zero")
-        if not 0 <= args.retries <= 5:
-            parser.error("--retries must be between 0 and 5")
-        try:
-            diagnostics: list[str] = []
-            records = fetch_wikidata_candidates(
-                timeout=args.timeout, retries=args.retries, diagnostics=diagnostics
-            )
-            if not records:
-                raise WikidataError(
-                    "Wikidata returned zero usable candidates; no output file was written."
-                )
-            output_path = Path(args.output)
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            save_aircraft(records, output_path)
-        except (OSError, ValueError, WikidataError) as exc:
-            print(f"error: {exc}", file=sys.stderr)
-            return 2
-        for message in diagnostics:
-            print(f"warning: {message}", file=sys.stderr)
-        model_candidates = sum(
-            record.get("candidate_classification") == "model_candidate"
-            for record in records
-        )
-        individual_aircraft = sum(
-            record.get("candidate_classification") == "individual_aircraft"
-            for record in records
-        )
-        ambiguous = sum(
-            record.get("candidate_classification") == "ambiguous"
-            for record in records
-        )
-        print(
-            f"Discovered {len(records)} candidate record(s): "
-            f"{model_candidates} model candidate(s), "
-            f"{individual_aircraft} individual aircraft, "
-            f"{ambiguous} ambiguous; catalog unchanged."
-        )
-        return 0
-
     if args.command == "cross-check":
         try:
-            candidate_path = Path(args.input)
-            with candidate_path.open("r", encoding="utf-8") as file:
+            input_path = Path(args.input) if args.input else Path(data_path)
+            with input_path.open("r", encoding="utf-8") as file:
                 payload = json.load(file)
             if not isinstance(payload, list) or any(not isinstance(item, dict) for item in payload):
-                raise ValueError("Candidate file must contain a JSON list of objects")
+                raise ValueError("Catalog file must contain a JSON list of objects")
             metadata_records = load_metadata_csv(args.metadata)
             report = cross_check_candidates(
                 payload,
                 metadata_records,
                 metadata_source=Path(args.metadata).name,
             )
+            report["catalog_source"] = str(input_path)
             write_cross_check_report(report, args.output)
         except (OSError, ValueError, json.JSONDecodeError, MetadataError) as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2
         counts = report["summary"]["statuses"]
         print(
-            f"Cross-checked {report['summary']['candidates']} candidate(s) against "
+            f"Cross-checked {report['summary']['candidates']} catalog record(s) against "
             f"{report['summary']['metadata_rows']} metadata row(s): "
             + ", ".join(f"{status}={count}" for status, count in sorted(counts.items()))
             + f". Report: {args.output}. No catalog changes made."
@@ -246,62 +178,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"Dry run only; catalog not changed. Target: {output_path}")
         else:
             print(f"Catalog updated: {output_path}")
-        print("Imported OpenSky records remain unverified; this does not satisfy the promote gate.")
-        return 0
-
-    if args.command == "promote":
-        try:
-            candidate_path = Path(args.input)
-            with candidate_path.open("r", encoding="utf-8") as file:
-                payload = json.load(file)
-            if not isinstance(payload, list) or any(not isinstance(item, dict) for item in payload):
-                raise ValueError("Candidate file must contain a JSON list of objects")
-            accepted, rejected = verified_records(payload)
-            if not accepted:
-                print(
-                    f"No verified records to promote; {len(rejected)} candidate(s) rejected. "
-                    "Output was not changed.",
-                    file=sys.stderr,
-                )
-                return 2
-            save_aircraft(accepted, args.output)
-        except (OSError, ValueError, json.JSONDecodeError) as exc:
-            print(f"error: {exc}", file=sys.stderr)
-            return 2
-        print(f"Promoted {len(accepted)} verified record(s); rejected {len(rejected)} candidate(s).")
-        if rejected:
-            for item in rejected[:10]:
-                print(f"  {item.get('source_id') or 'unknown'}: {'; '.join(item['issues'])}", file=sys.stderr)
-            if len(rejected) > 10:
-                print(f"  ... and {len(rejected) - 10} more rejected candidate(s).", file=sys.stderr)
-        return 0
-
-    if args.command == "update":
-        if args.timeout <= 0:
-            parser.error("--timeout must be greater than zero")
-        if not 0 <= args.retries <= 5:
-            parser.error("--retries must be between 0 and 5")
-
-        try:
-            diagnostics: list[str] = []
-            records = fetch_wikidata_aircraft(
-                timeout=args.timeout,
-                retries=args.retries,
-                diagnostics=diagnostics,
-            )
-            if not records and not args.allow_empty:
-                raise WikidataError(
-                    "Wikidata returned zero usable records; the existing catalog was not changed. "
-                    "Use --allow-empty only if replacing it with an empty catalog is intentional."
-                )
-            save_aircraft(records, data_path)
-        except (OSError, ValueError, WikidataError) as exc:
-            print(f"error: {exc}", file=sys.stderr)
-            return 2
-
-        for message in diagnostics:
-            print(f"warning: {message}", file=sys.stderr)
-        print(f"Updated catalog with {len(records)} record(s).")
+        print("Imported OpenSky records remain unverified; use review and verify after independent manual review.")
         return 0
 
     try:
@@ -309,6 +186,53 @@ def main(argv: Sequence[str] | None = None) -> int:
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+
+    if args.command == "review":
+        report = catalog_review(aircraft)
+        try:
+            if args.output:
+                write_review_report(report, args.output)
+        except OSError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        if args.json:
+            print(json.dumps(report, indent=2, ensure_ascii=False))
+            return 0
+        print(f"Catalog records: {report['records']}")
+        print("Verification status:")
+        for status, count in report["verification_statuses"].items():
+            print(f"  {status}: {count}")
+        print(f"Conflicting ICAO type codes: {len(report['conflicts'])}")
+        for conflict in report["conflicts"]:
+            models = "; ".join(f"{item['manufacturer'] or 'Unknown manufacturer'} — {item['model'] or 'Unknown model'}" for item in conflict["records"])
+            print(f"  {conflict['icao_type_designator']}: {models}")
+        if args.output:
+            print(f"Review report saved: {args.output}")
+        return 0
+
+    if args.command == "verify":
+        if not args.confirm:
+            parser.error("verify requires --confirm after manually checking the source")
+        try:
+            matches = [
+                index for index, record in enumerate(aircraft)
+                if record.get("model") == args.model
+                and (args.icao is None or record.get("icao_type_designator") == args.icao.upper())
+            ]
+            if len(matches) != 1:
+                raise ValueError(f"Expected exactly one record match; found {len(matches)}. Use --icao to disambiguate.")
+            index = matches[0]
+            code = aircraft[index].get("icao_type_designator")
+            if code and any(conflict["icao_type_designator"] == code for conflict in catalog_review(aircraft)["conflicts"]) and not args.confirm_conflict:
+                raise ValueError(f"{code} is listed as conflicting. Review the conflict report first, or pass --confirm-conflict only after resolving it manually.")
+            aircraft[index] = verify_record(aircraft[index], source_name=args.source_name, source_url=args.source_url, retrieved_at=args.retrieved_at)
+            save_aircraft(aircraft, data_path)
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        print(f"Marked record verified: {args.model}")
+        print(f"Catalog updated: {data_path}")
+        return 0
 
     if args.command == "stats":
         result = catalog_stats(aircraft)

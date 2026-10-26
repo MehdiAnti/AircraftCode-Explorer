@@ -203,9 +203,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         for status, count in report["verification_statuses"].items():
             print(f"  {status}: {count}")
         print(f"Conflicting ICAO type codes: {len(report['conflicts'])}")
-        for conflict in report["conflicts"]:
+        for conflict in report["conflicts"][:25]:
             models = "; ".join(f"{item['manufacturer'] or 'Unknown manufacturer'} — {item['model'] or 'Unknown model'}" for item in conflict["records"])
             print(f"  {conflict['icao_type_designator']}: {models}")
+        if len(report["conflicts"]) > 25:
+            print(f"  ... and {len(report['conflicts']) - 25} more conflict(s). Use --json or --output to inspect the full report.")
         if args.output:
             print(f"Review report saved: {args.output}")
         return 0

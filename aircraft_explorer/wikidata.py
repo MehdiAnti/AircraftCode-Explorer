@@ -224,7 +224,7 @@ _GENERIC_DESCRIPTIONS = {
     "aircraft", "airplane", "aeroplane", "helicopter", "plane", "military aircraft"
 }
 _INDIVIDUAL_DESCRIPTION = re.compile(
-    r"\\b(serial (?:number )?of|registration of|tail number of|individual aircraft|"
+    r"\b(serial (?:number )?of|registration of|tail number of|individual aircraft|"
     r"aircraft that (?:collided|crashed|was|were|is|has)|aircraft involved in|"
     r"aircraft destroyed in|aircraft lost in)\\b",
     re.IGNORECASE,

@@ -317,7 +317,7 @@ def write_opensky_registry_shards(
                     value = record.get(field)
                     if not value:
                         continue
-                    first = re.sub(r"[^a-z0-9]", "", value.casefold())[:1] or "_"
+                    first = re.sub(r"[^a-z0-9]", "", value.casefold())[:2] or "_"
                     key = (field, first)
                     if key not in writers:
                         final_path = directory / f"{first}.json.gz"

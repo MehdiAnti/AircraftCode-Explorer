@@ -36,6 +36,10 @@ def verification_issues(record: dict[str, Any]) -> list[str]:
     if record.get("verification_status") != "verified":
         issues.append("verification_status must be 'verified'")
 
+    model = record.get("model")
+    if not isinstance(model, str) or not model.strip():
+        issues.append("model is required before a candidate can be promoted")
+
     evidence = record.get("field_evidence")
     if not isinstance(evidence, dict):
         evidence = {}

@@ -132,10 +132,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 )
             output_path = Path(args.output)
             output_path.parent.mkdir(parents=True, exist_ok=True)
-            output_path.write_text(
-                json.dumps(records, indent=2, ensure_ascii=False) + "\n",
-                encoding="utf-8",
-            )
+            save_aircraft(records, output_path)
         except (OSError, ValueError, WikidataError) as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2

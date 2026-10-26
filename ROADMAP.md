@@ -23,7 +23,7 @@ Build a maintainable aircraft catalog and explorer that supports searching by IC
 |---|---|---|
 | 1 | Repository foundation and local catalog CLI | Complete; execution not yet independently verified |
 | 2 | Unit tests and continuous integration | Verified — 14 tests passed on Python 3.10–3.13; awaiting user review |
-| 3 | Wikidata data refresh | Planned |
+| 3 | Wikidata data refresh | Implemented; CI verification in progress |
 | 4 | Data quality, normalization, and provenance | Planned |
 | 5 | Documentation and release readiness | Planned |
 | 6 | Optional usability improvements | Planned |
@@ -74,19 +74,23 @@ Deliverables:
 
 **Goal:** Provide an explicit command that fetches candidate aircraft records from Wikidata and writes a local catalog.
 
-Planned deliverables:
-- A separate data-source module for the SPARQL query and HTTP request.
-- A CLI command such as `python -m aircraft_explorer update`.
-- Request timeout, sensible user-agent, bounded retries for transient failures, and clear error messages.
-- Parsing that tolerates optional/missing fields and avoids inventing designators.
-- Safe output handling: do not overwrite the current catalog with an empty or clearly failed result unless the user explicitly requests it.
-- Unit tests using mocked responses; tests must not depend on live network access.
+**Implemented:**
+- `aircraft_explorer/wikidata.py` queries Wikidata SPARQL for entities with the P239 ICAO type designator property.
+- The request has a 20-second default timeout, a descriptive User-Agent, bounded exponential backoff, and up to three retries for network errors and HTTP 429/5xx responses.
+- The `update` CLI command accepts `--timeout`, `--retries` (0–5), `--allow-empty`, and global `--data`.
+- Catalog output is serialized to a temporary file and atomically replaced only after a successful response and parse. Empty results are refused by default.
+- Records retain Wikidata source name, entity ID, source URL, retrieval timestamp, labels, manufacturer, description, and the supplied designator.
+- The parser deduplicates by Wikidata entity ID and rejects malformed designators rather than importing them.
+- Mocked tests cover parsing/provenance, retry behavior, retry limits, input validation, successful update, network-failure preservation, and empty-result protection.
+- `README.md` documents refresh usage and source limitations.
 
 **Acceptance criteria:**
 - The refresh command is separate from ordinary local searches.
 - Network failures leave the existing catalog intact.
-- Results include provenance/source information where available.
-- The project documents source coverage and limitations.
+- Results include source provenance.
+- Mocked tests do not depend on live network access.
+
+**Verification status:** The first CI run exposed one malformed-designator fixture being accepted; the parser was tightened to reject it. The corrected CI run is in progress. Do not mark Phase 3 complete until the final GitHub Actions result is confirmed.
 
 ## Phase 4 — Data quality, normalization, and provenance
 
@@ -140,4 +144,5 @@ Possible items, prioritized with user approval:
 ## Phase completion log
 
 - **Phase 1:** Foundation files committed. Local execution not yet verified.
-- **Phase 2:** Test suite, CI workflow, README roadmap link, and roadmap status update committed. GitHub Actions run #3 passed all 14 tests across Python 3.10–3.13. User review pending before Phase 3.
+- **Phase 2:** Test suite, CI workflow, README roadmap link, and roadmap status update committed. GitHub Actions run #3 passed all 14 tests across Python 3.10–3.13; user approved Phase 3.
+- **Phase 3:** Wikidata refresh, atomic catalog replacement, provenance, CLI options, mocked tests, and documentation committed. Initial CI exposed one parser validation failure; parser fix committed and verification is pending on GitHub Actions run #11.

@@ -134,16 +134,24 @@ def merge_opensky_records(
             added += 1
             continue
         existing = merged[position]
-        entry = {
-            "source": imported.get("source"),
-            "source_url": imported.get("source_url"),
-            "source_retrieved_at": imported.get("source_retrieved_at"),
-        }
+        source_name = imported.get("source")
+        source_url = imported.get("source_url")
+        retrieved_at = imported.get("source_retrieved_at")
+        if existing.get("source") == source_name and existing.get("source_url") == source_url:
+            if existing.get("source_retrieved_at") != retrieved_at:
+                existing["source_retrieved_at"] = retrieved_at
+                enriched += 1
+            continue
         history = existing.get("source_records")
         if not isinstance(history, list):
             history = []
-        if entry not in history:
-            history.append(entry)
+        match = next((item for item in history if isinstance(item, dict) and item.get("source") == source_name and item.get("source_url") == source_url), None)
+        if match is None:
+            history.append({"source": source_name, "source_url": source_url, "source_retrieved_at": retrieved_at})
+            existing["source_records"] = history
+            enriched += 1
+        elif match.get("source_retrieved_at") != retrieved_at:
+            match["source_retrieved_at"] = retrieved_at
             existing["source_records"] = history
             enriched += 1
     return merged, {"added": added, "enriched": enriched}

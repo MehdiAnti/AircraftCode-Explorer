@@ -22,7 +22,7 @@ Build a maintainable aircraft catalog and explorer that supports searching by IC
 | Phase | Name | Status |
 |---|---|---|
 | 1 | Repository foundation and local catalog CLI | Complete; execution not yet independently verified |
-| 2 | Unit tests and continuous integration | Implemented; awaiting test/CI verification and user review |
+| 2 | Unit tests and continuous integration | Verified — 14 tests passed on Python 3.10–3.13; awaiting user review |
 | 3 | Wikidata data refresh | Planned |
 | 4 | Data quality, normalization, and provenance | Planned |
 | 5 | Documentation and release readiness | Planned |
@@ -66,7 +66,9 @@ Deliverables:
 - CI uses supported Python versions and runs without third-party runtime dependencies.
 - Report the actual test result. If tests cannot be executed in the current environment, state that clearly.
 
-**Status:** Implementation committed. Test execution and GitHub Actions results have not yet been verified, so this phase remains open pending verification and user review.
+**Verification results (2026-10-26):** GitHub Actions run [#3](https://github.com/MehdiAnti/AircraftCode-Explorer/actions/runs/40335663823) completed successfully for commit `9cdb7b47ef5643762c52d3e5e39b13e14a8ec2eb`. All four matrix jobs (Python 3.10, 3.11, 3.12, and 3.13) completed successfully. The Python 3.10 job log confirms `Ran 14 tests` and `OK`; the other three jobs also report the test step succeeded. The tests were run by GitHub Actions on the committed repository, not in this chat's local runtime.
+
+**Status:** Implementation and CI verification complete. Awaiting user review/approval before Phase 3.
 
 ## Phase 3 — Wikidata data refresh
 
@@ -138,4 +140,4 @@ Possible items, prioritized with user approval:
 ## Phase completion log
 
 - **Phase 1:** Foundation files committed. Local execution not yet verified.
-- **Phase 2:** Test suite, CI workflow, README roadmap link, and this project roadmap committed. Automated test/CI results still need verification.
+- **Phase 2:** Test suite, CI workflow, README roadmap link, and roadmap status update committed. GitHub Actions run #3 passed all 14 tests across Python 3.10–3.13. User review pending before Phase 3.

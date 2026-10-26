@@ -61,7 +61,6 @@ For example:
 ```bash
 python -m aircraft_explorer --data /tmp/aircraft.json stats
 python -m aircraft_explorer --data /tmp/aircraft.json search C172
-python -m aircraft_explorer --data /tmp/aircraft.json update
 ```
 
 ### `search`
@@ -181,8 +180,8 @@ The catalog file is `data/aircraft.json` by default and contains a JSON list of 
 - `source_id`: stable identifier assigned by the source
 - `source_url`: URL for the source entity
 - `source_retrieved_at`: UTC retrieval timestamp
-- `verification_status`: discovery/verification state (for example, `discovered` or `verified`)
-- `field_evidence`: mapping of factual fields to source name, HTTPS URL, and retrieval timestamp; independent source-only evidence is not sufficient for promotion
+- `verification_status`: review state (for example, `imported_unverified` or `verified`)
+- `field_evidence`: mapping of each populated factual field to an independent source name, HTTPS URL, and retrieval timestamp
 
 An illustrative schema-only record is shown below. Its placeholder values are not real aircraft data and should not be copied into the catalog as a factual record:
 
@@ -222,7 +221,6 @@ Before submitting a change, run the test command above and review the output. Se
 - **`No matching aircraft found.`** The local catalog may be empty, or no record matches the supplied text and filters. Check `python -m aircraft_explorer stats` and the selected `--data` path.
 - **`Aircraft catalog must contain a JSON list`** The catalog's top level must be a JSON array (`[]` or a list of record objects).
 - **A record field must be a string or null.** One of the known fields contains a number, boolean, array, or object. Correct the JSON value and try again.
-- **`independent source returned zero usable records`** The updater intentionally protects the existing catalog. Check connectivity and the upstream response first. Only pass `--allow-empty` if replacing the catalog with an empty list is intended.
 
 ## License status
 

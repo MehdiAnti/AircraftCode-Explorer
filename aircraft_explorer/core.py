@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
-DEFAULT_DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "models.json"
+DEFAULT_DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "aircraft.json"
 STRING_FIELDS = (
     "icao_type_designator",
     "model",

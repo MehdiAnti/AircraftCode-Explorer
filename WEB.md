@@ -1,6 +1,6 @@
 # Web explorer and automated refresh
 
-The static HTML/CSS/JavaScript website is deployed through GitHub Pages. It supports model-catalog search and separate individual-aircraft lookup by registration, ICAO type code, or operator. Search results are expandable cards, keeping the current compact design while exposing available airframe metadata only when opened.
+The static HTML/CSS/JavaScript website is deployed through GitHub Pages. It supports model-catalog search and separate individual-aircraft lookup by registration, ICAO24 address, ICAO type code, or operator. Search results are expandable cards, keeping the current compact design while exposing available airframe metadata only when opened.
 
 The **Refresh data** button reloads the latest published model catalog JSON. It does not trigger a workflow and does not need a GitHub token.
 
@@ -23,6 +23,7 @@ The CSV is not committed to the repository. Individual-aircraft registry shards 
 
 - **Aircraft catalog:** searches the model-level catalog and retains sorting and pagination.
 - **Registration:** finds individual airframes by registration prefix.
+- **ICAO24 address:** finds an individual aircraft by its six-character ICAO24 address prefix.
 - **ICAO type code:** finds individual airframes by type-code prefix.
 - **Operator:** finds individual airframes by operator-name prefix.
 - Registry lookup requires at least two letters or digits. Search ignores case and removes punctuation for registry matching.

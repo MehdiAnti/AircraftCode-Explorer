@@ -8,6 +8,7 @@ on:
       - "styles.css"
       - "app.js"
       - "data/aircraft.json"
+      - "data/registry/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
   workflow_call:
@@ -41,6 +42,7 @@ jobs:
           mkdir -p _site/data
           cp index.html styles.css app.js _site/
           cp data/aircraft.json _site/data/aircraft.json
+          cp -R data/registry _site/data/registry
 
       - name: Upload website artifact
         uses: actions/upload-pages-artifact@v3

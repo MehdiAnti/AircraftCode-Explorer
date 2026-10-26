@@ -26,7 +26,7 @@ def _valid_timestamp(value: Any) -> bool:
 
 
 def verification_issues(record: dict[str, Any]) -> list[str]:
-    """Return reasons a candidate is not safe to promote into the main catalog.
+    """Return reasons a candidate is not safe to mark verified in the main catalog.
 
     Every populated factual field must have independent source evidence
     with a valid HTTPS URL and retrieval timestamp. A missing ICAO code is
@@ -44,7 +44,7 @@ def verification_issues(record: dict[str, Any]) -> list[str]:
 
     model = record.get("model")
     if not isinstance(model, str) or not model.strip():
-        issues.append("model is required before a candidate can be promoted")
+        issues.append("model is required before a record can be verified")
 
     evidence = record.get("field_evidence")
     if not isinstance(evidence, dict):
@@ -85,7 +85,7 @@ def verification_issues(record: dict[str, Any]) -> list[str]:
 
 
 def verified_records(records: Iterable[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Split candidates into promotable records and rejected records with reasons."""
+    """Split records into verified records and rejected records with reasons."""
     accepted: list[dict[str, Any]] = []
     rejected: list[dict[str, Any]] = []
     for original in records:

@@ -2,6 +2,8 @@
 
 const DATA_URL = "./data/aircraft.json";
 const PAGE_SIZE = 30;
+const SEARCH_DELAY = 120;
+const SORT_FIELDS = ["manufacturer", "model", "icao_type_designator", "description"];
 const el = {
   search: document.querySelector("#search-input"),
   sort: document.querySelector("#sort-select"),
@@ -20,13 +22,17 @@ const el = {
   updated: document.querySelector("#last-updated"),
 };
 let aircraft = [];
+let indexedAircraft = [];
+let sortedIndexes = new Map();
 let results = [];
 let page = 1;
 let loadedAt = null;
 let loading = false;
 let loadError = null;
+let searchTimer = null;
 
 function clean(value) { return typeof value === "string" ? value.trim() : ""; }
+function normalized(value) { return clean(value).toLocaleLowerCase(); }
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (character) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
@@ -40,18 +46,32 @@ function showMessage(message) {
 function updateStats() {
   el.records.textContent = number(aircraft.length);
   el.codes.textContent = number(aircraft.filter((record) => clean(record.icao_type_designator)).length);
-  el.makers.textContent = number(new Set(aircraft.map((record) => clean(record.manufacturer).toLocaleLowerCase()).filter(Boolean)).size);
+  el.makers.textContent = number(new Set(aircraft.map((record) => normalized(record.manufacturer)).filter(Boolean)).size);
   el.status.textContent = loading ? "Updating…" : loadError && !aircraft.length ? "Unavailable" : "Ready";
   el.updated.textContent = loadedAt ? "Loaded " + loadedAt.toLocaleString() : loadError ? "Could not load catalog" : "Waiting for data";
 }
-function sortRecords(records) {
-  const field = el.sort.value;
-  return records.slice().sort((left, right) => {
-    const a = clean(left[field]), b = clean(right[field]);
-    if (!a && b) return 1;
-    if (a && !b) return -1;
-    return a.localeCompare(b, undefined, { sensitivity: "base", numeric: true });
-  });
+function buildSearchIndex(records) {
+  indexedAircraft = records.map((record) => ({
+    record,
+    searchText: [
+      record.icao_type_designator,
+      record.model,
+      record.manufacturer,
+      record.description,
+      record.source,
+    ].map(normalized).filter(Boolean).join(" "),
+    sortValues: Object.fromEntries(SORT_FIELDS.map((field) => [field, normalized(record[field])])),
+  }));
+  sortedIndexes = new Map();
+  for (const field of SORT_FIELDS) {
+    sortedIndexes.set(field, indexedAircraft.slice().sort((left, right) => {
+      const a = left.sortValues[field];
+      const b = right.sortValues[field];
+      if (!a && b) return 1;
+      if (a && !b) return -1;
+      return a.localeCompare(b, undefined, { numeric: true });
+    }));
+  }
 }
 function card(record) {
   const code = clean(record.icao_type_designator);
@@ -97,7 +117,7 @@ function render() {
   }
   const pages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
   page = Math.min(page, pages);
-  el.list.innerHTML = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map(card).join("");
+  el.list.innerHTML = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((item) => card(item.record)).join("");
   el.count.textContent = results.length === aircraft.length
     ? number(results.length) + " aircraft records"
     : number(results.length) + " of " + number(aircraft.length) + " records";
@@ -105,14 +125,18 @@ function render() {
   updatePagination();
 }
 function filter() {
-  const query = el.search.value.trim().toLocaleLowerCase();
-  results = sortRecords(aircraft.filter((record) => {
-    const haystack = [record.icao_type_designator, record.model, record.manufacturer, record.description, record.source]
-      .map(clean).join(" ").toLocaleLowerCase();
-    return !query || haystack.includes(query);
-  }));
+  const query = normalized(el.search.value);
+  const ordered = sortedIndexes.get(el.sort.value) || indexedAircraft;
+  results = query ? ordered.filter((item) => item.searchText.includes(query)) : ordered;
   page = 1;
   render();
+}
+function scheduleSearch() {
+  if (searchTimer !== null) clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    searchTimer = null;
+    filter();
+  }, SEARCH_DELAY);
 }
 async function loadCatalog() {
   if (loading) return;
@@ -133,6 +157,7 @@ async function loadCatalog() {
       throw new Error("Catalog JSON must be an array of aircraft objects");
     }
     aircraft = payload;
+    buildSearchIndex(aircraft);
     loadedAt = new Date();
     filter();
   } catch (error) {
@@ -146,10 +171,12 @@ async function loadCatalog() {
     render();
   }
 }
-el.search.addEventListener("input", filter);
+el.search.addEventListener("input", scheduleSearch);
 el.sort.addEventListener("change", filter);
 el.refresh.addEventListener("click", loadCatalog);
 el.clear.addEventListener("click", () => {
+  if (searchTimer !== null) clearTimeout(searchTimer);
+  searchTimer = null;
   el.search.value = "";
   el.sort.value = "manufacturer";
   filter();

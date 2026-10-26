@@ -16,7 +16,7 @@ Build a maintainable aircraft catalog and explorer that supports searching by IC
 - Never claim tests or workflows passed unless they were actually run and the result was observed.
 - Prefer Python's standard library unless a dependency has a clear benefit.
 - Never invent ICAO type designators. Preserve source/provenance information and distinguish source data from independently verified facts.
-- Treat Wikidata as a useful community-maintained source, not as a complete or authoritative ICAO register.
+- Preserve source provenance and distinguish imported metadata from independently verified facts.
 - Do not select a project license or create a license file without the repository owner's confirmation.
 
 ## Phase status
@@ -25,7 +25,7 @@ Build a maintainable aircraft catalog and explorer that supports searching by IC
 |---|---|---|
 | 1 | Repository foundation and local catalog CLI | Complete; execution not yet independently verified |
 | 2 | Unit tests and continuous integration | Verified — 14 tests passed on Python 3.10–3.13; user review status previously recorded |
-| 3 | Wikidata data refresh | Complete — verified and approved by user |
+| 3 | legacy source data refresh | Complete — verified and approved by user |
 | 4 | Data quality, normalization, and provenance | Complete — verified and approved by user |
 | 5 | Documentation and release readiness | Complete — PR #1 merged; CI status should be checked separately |
 | 6.1–6.2 | CSV export, search, and sorting | Complete — PR #2 merged |
@@ -50,13 +50,13 @@ Build a maintainable aircraft catalog and explorer that supports searching by IC
 
 **Verification:** GitHub Actions run [#3](https://github.com/MehdiAnti/AircraftCode-Explorer/actions/runs/40335663823) passed all four matrix jobs; the Python 3.10 log confirmed 14 tests and `OK`.
 
-## Phase 3 — Wikidata data refresh
+## Phase 3 — legacy source data refresh
 
-**Goal:** Provide an explicit command that fetches candidate aircraft records from Wikidata and writes a local catalog.
+**Goal:** Provide an explicit command that fetches candidate aircraft records from legacy source and writes a local catalog.
 
 **Implemented:** SPARQL refresh command, timeout/User-Agent/retries, atomic writes, empty-result protection, provenance fields, mocked tests, and documentation.
 
-**Verification:** GitHub Actions run [#14](https://github.com/MehdiAnti/AircraftCode-Explorer/actions/runs/40339675455) passed all four Python 3.10–3.13 jobs with 27 tests each. Tests used mocked responses; no live Wikidata refresh was run.
+**Verification:** GitHub Actions run [#14](https://github.com/MehdiAnti/AircraftCode-Explorer/actions/runs/40339675455) passed all four Python 3.10–3.13 jobs with 27 tests each. Tests used mocked responses; no live legacy source refresh was run.
 
 **Status:** Complete and user-approved.
 
@@ -64,7 +64,7 @@ Build a maintainable aircraft catalog and explorer that supports searching by IC
 
 **Goal:** Make refreshed records easier to trust and maintain.
 
-**Implemented:** Whitespace normalization, uppercase designators, deterministic deduplication, source identity preservation, conservative fallback identity, catalog field validation, safe handling and diagnostics for malformed Wikidata rows, regression tests, and provenance documentation.
+**Implemented:** Whitespace normalization, uppercase designators, deterministic deduplication, source identity preservation, conservative fallback identity, catalog field validation, safe handling and diagnostics for malformed legacy source rows, regression tests, and provenance documentation.
 
 **Verification:** GitHub Actions run [#27](https://github.com/MehdiAnti/AircraftCode-Explorer/actions/runs/40342033600) passed all four Python 3.10–3.13 jobs; the Python 3.10 log confirmed 34 tests. Tests used mocked source responses; no live refresh was run. The checked-in `data/aircraft.json` remains `[]`, as requested.
 
@@ -126,7 +126,7 @@ Further possibilities, subject to explicit user approval: optional desktop or we
 
 - **Phase 1:** Foundation files committed; local execution not independently verified.
 - **Phase 2:** Test suite and CI committed; run #3 passed 14 tests on Python 3.10–3.13.
-- **Phase 3:** Wikidata refresh, provenance, CLI options, mocked tests, and documentation committed; run #14 passed 27 tests on Python 3.10–3.13; user approved.
+- **Phase 3:** legacy source refresh, provenance, CLI options, mocked tests, and documentation committed; run #14 passed 27 tests on Python 3.10–3.13; user approved.
 - **Phase 4:** Normalization, deterministic deduplication, validation, diagnostics, tests, and provenance docs committed; run #27 passed 34 tests on Python 3.10–3.13; user approved.
 - **Phase 5:** Documentation and release-readiness guidance merged in PR #1. No license has been selected and no release tag has been created.
 - **Phase 6.1–6.2:** CSV export and selectable search sorting merged in PR #2. No aircraft data was added or changed.
@@ -134,38 +134,12 @@ Further possibilities, subject to explicit user approval: optional desktop or we
 - **Phase 7:** Discovery and verification workflow merged in PR #4. The trusted catalog remains unchanged; follow-up discovery-classification improvements are under review.
 
 
-## Phase 7 — Broad aircraft data ingestion
-
-**Goal:** Discover aircraft entities with and without ICAO designators, retain provenance, and prevent unverified candidates from silently entering the main catalog.
-
-**Implemented:** a broad Wikidata discovery query for candidates with and without ICAO designators; field-level Wikidata provenance; heuristic candidate classification into model candidates, individual aircraft, and ambiguous records; reasons retained for each classification; promotion validation requiring independent non-Wikidata evidence; a separate output by default; mocked tests; and documentation.
-
-**Important limitations:** classification is heuristic and can misclassify entities; it is a triage aid, not verification. The promotion command checks evidence metadata and classification status but does not crawl or authenticate cited pages. Reviewers must verify each source supports the associated field. No live refresh was run as part of the code change, and `data/aircraft.json` remains unchanged until records are independently verified and reviewed.
-
-**Acceptance criteria:** candidates with and without designators can be discovered; unverified or Wikidata-only fields cannot be promoted; independently evidenced aircraft without designators are permitted; candidate discovery never overwrites the trusted catalog; failed or empty discovery does not overwrite existing output.
-
-**Status:** Phase 7 implementation was merged in PR [#4](https://github.com/MehdiAnti/AircraftCode-Explorer/pull/4). Discovery classification refinements were merged in PR [#5](https://github.com/MehdiAnti/AircraftCode-Explorer/pull/5). The checked-in aircraft catalog remains unchanged until candidate evidence has been verified.
 
 
-## Phase 8 — Local aircraft metadata cross-check
+## Phase 10 — OpenSky-first workflow and catalog review
 
-**Goal:** Add a dependency-free, API-free way to compare discovered candidates with a metadata CSV obtained separately, while preserving the existing verification gate.
+**Scope:** retire legacy network discovery/refresh commands; make local CSV import the documented ingestion path; add detailed verification-state and type-code conflict reports; make repeated imports update freshness without duplicating records or provenance; add deliberate manual verification based on independent source evidence.
 
-**Implemented in the phase branch:** a `cross-check` CLI command, flexible CSV header handling for model/type-code fields, conservative normalized comparisons, explicit conflict and multiple-match statuses, a JSON report with source filename and check time, and mocked/local-file tests.
+**Boundaries:** importing or matching CSV data does not verify facts. The manual verification command records source details supplied by the user and cannot authenticate a source or prove that it supports the fields. Conflicting codes remain review-required unless the user explicitly confirms a manually resolved conflict. No dataset is downloaded or bundled.
 
-**Boundaries:** no automatic download, no API credentials, no dataset bundled in the repository, no change to `data/aircraft.json`, and no automatic promotion or addition to `field_evidence`. A local file's download date is not inferred. OpenSky metadata may be stale and has licensing/reuse limitations; the user must obtain and use a dataset only as permitted and manually inspect results.
-
-**Acceptance criteria:** malformed CSV and candidate input fail safely; code/model matches are reported separately; disagreements and duplicate matches are visible; empty/no-match data is not treated as verification; report output is separate from the trusted catalog.
-
-**Status:** Complete — PR [#6](https://github.com/MehdiAnti/AircraftCode-Explorer/pull/6) merged; the CI workflow passed on Python 3.10–3.13.
-
-
-## Phase 9 — OpenSky CSV import and safe catalog merge
-
-**Goal:** Build the actual local catalog from a locally obtained OpenSky aircraft metadata CSV without routing through Wikidata discovery or the independent-evidence promotion gate.
-
-**Scope:** dedicated `import-opensky` command; flexible CSV headers; model-level grouping; merge into the selected catalog (default `data/aircraft.json`); provenance history for exact matches; conflict preservation; dry-run support; and standard-library tests.
-
-**Data-use boundary:** no automatic download or source dataset is committed. Confirm reuse and redistribution terms for the particular file before committing imported data to the public repository. Imported records remain marked unverified.
-
-**Status:** Implementation under review in PR #7. No OpenSky dataset was downloaded or bundled.
+**Status:** implementation on branch `phase-10-opensky-review-no-wikidata`; PR and CI pending.

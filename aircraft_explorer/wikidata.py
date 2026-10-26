@@ -122,7 +122,11 @@ def parse_wikidata_response(
         if not item_uri:
             skipped += 1
             continue
-        parsed_uri = urlsplit(item_uri)
+        try:
+            parsed_uri = urlsplit(item_uri)
+        except ValueError:
+            skipped += 1
+            continue
         source_id = parsed_uri.path.rstrip("/").rsplit("/", 1)[-1]
         if (
             parsed_uri.scheme not in {"http", "https"}

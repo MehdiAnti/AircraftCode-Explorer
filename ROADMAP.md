@@ -4,7 +4,7 @@ This file is the source of truth for project phases, current progress, and phase
 
 ## Project goal
 
-Build a maintainable aircraft catalog and explorer that supports searching by ICAO type designator, model, and manufacturer. Start with a simple Python command-line interface and a local JSON catalog, then add a repeatable data refresh workflow.
+Build a maintainable aircraft catalog and explorer that supports searching by ICAO type designator, model, and manufacturer. The project includes a Python CLI, a static HTML/CSS/JavaScript website, a JSON catalog, and a repeatable GitHub Actions refresh/deployment workflow.
 
 ## Working rules
 
@@ -143,3 +143,19 @@ Further possibilities, subject to explicit user approval: optional desktop or we
 **Boundaries:** importing or matching CSV data does not verify facts. The manual verification command records source details supplied by the user and cannot authenticate a source or prove that it supports the fields. Conflicting codes remain review-required unless the user explicitly confirms a manually resolved conflict. No dataset is downloaded or bundled.
 
 **Status:** implementation on branch `phase-10-opensky-review-no-wikidata`; PR and CI pending.
+
+
+## Phase 11 — Static web explorer and automated OpenSky refresh
+
+**Goal:** Provide a polished static aircraft-search website and a repeatable weekly catalog refresh.
+
+**Scope:**
+- Add responsive HTML/CSS/JavaScript UI with search, sorting, pagination, catalog counts, source/provenance details, and a refresh button that reloads the latest published JSON.
+- Add a GitHub Pages deployment workflow that publishes the site and `data/aircraft.json`.
+- Add a scheduled workflow for Sunday 06:00 UTC plus manual dispatch. It downloads OpenSky CSV to temporary runner storage, uses the existing Python importer, validates the generated JSON, commits only the JSON when changed, and deploys the refreshed website.
+- Keep source CSV out of Git history and never expose a GitHub token in frontend JavaScript.
+- Preserve the rule that imported records remain unverified.
+
+**Setup note:** Repository Settings → Pages must use GitHub Actions. Check the repository plan and site visibility before enabling Pages, because a Pages site may be publicly accessible even when the source repository is private.
+
+**Verification:** Pending pull request review and GitHub Actions runs. No live OpenSky download or deployment is claimed before the workflow is run.

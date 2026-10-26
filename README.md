@@ -36,7 +36,7 @@ Options:
 - `--allow-empty`: explicitly allow an empty result to replace the catalog. By default, an empty response leaves the existing catalog untouched.
 - Global `--data PATH`: use a different catalog file, for example `python -m aircraft_explorer --data /tmp/aircraft.json update`.
 
-The update command queries Wikidata's SPARQL endpoint for items with an ICAO aircraft type designator. Requests use a timeout, a descriptive User-Agent, and bounded exponential backoff for transient network errors and HTTP 429/5xx responses. The catalog is replaced atomically only after a valid response has been parsed.
+The update command queries Wikidata's SPARQL endpoint for items with an ICAO aircraft type designator. Requests use a timeout, a descriptive User-Agent, and bounded exponential backoff for transient network errors and HTTP 429/5xx responses. The parser skips malformed or incomplete rows and prints a warning with the number skipped. The catalog is replaced atomically only after a valid response has been parsed.
 
 ## Data format and provenance
 
@@ -51,7 +51,7 @@ Records may include:
 - `source_url`: link to the source entity
 - `source_retrieved_at`: UTC timestamp for when the response was retrieved
 
-Wikidata is community-maintained and is not a guarantee of complete or authoritative ICAO data. This initial query includes only items that have the Wikidata ICAO type designator property; aircraft without that property are not returned. Verify designators against an authoritative source before operational use.
+Wikidata is community-maintained and is not a guarantee of complete or authoritative ICAO data. This initial query includes only items that have the Wikidata ICAO type designator property; aircraft without that property are not returned by refresh. Local records without a designator are still valid and searchable by model or manufacturer. The tool does not infer or fabricate ICAO codes. The designator field is sourced from Wikidata and is not independently verified here; missing values remain unknown. Model, manufacturer, and description are source labels, not independently verified facts. No designator is inferred by the application. Verify designators against an authoritative source before operational use.
 
 ## Development and tests
 

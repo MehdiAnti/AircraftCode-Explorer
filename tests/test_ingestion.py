@@ -67,6 +67,32 @@ class VerificationTests(unittest.TestCase):
         }
         self.assertTrue(verification_issues(record))
 
+    def test_individual_aircraft_candidate_cannot_be_promoted(self):
+        record = {
+            "verification_status": "verified",
+            "candidate_classification": "individual_aircraft",
+            "model": "158761",
+            "field_evidence": {"model": [self.evidence()]},
+        }
+        self.assertTrue(
+            any("candidate classification" in issue for issue in verification_issues(record))
+        )
+
+    def test_ambiguous_candidate_cannot_be_promoted(self):
+        record = {
+            "verification_status": "verified",
+            "candidate_classification": "ambiguous",
+            "model": "3B-SGT",
+            "description": "aircraft",
+            "field_evidence": {
+                "model": [self.evidence()],
+                "description": [self.evidence()],
+            },
+        }
+        self.assertTrue(
+            any("candidate classification" in issue for issue in verification_issues(record))
+        )
+
     def test_rejects_missing_verification_status(self):
         accepted, rejected = verified_records([{"model": "Example model"}])
         self.assertEqual(accepted, [])

@@ -9,6 +9,7 @@ from aircraft_explorer.wikidata import (
     WikidataError,
     _request_json,
     parse_wikidata_response,
+    parse_wikidata_candidates,
 )
 
 

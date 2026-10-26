@@ -30,7 +30,7 @@ Build a maintainable aircraft catalog and explorer that supports searching by IC
 | 5 | Documentation and release readiness | Complete — PR #1 merged; CI status should be checked separately |
 | 6.1–6.2 | CSV export, search, and sorting | Complete — PR #2 merged |
 | 6.3 | Catalog status and freshness | Complete — PR #3 merged |
-| 7 | Broad aircraft discovery, field-level verification, and safe promotion | Complete — PR #4 merged; classification refinements merged in PR #5 |\n| 8 | Local metadata cross-check and conflict reporting | Implemented in review PR; no API, automatic download, or catalog mutation |
+| 7 | Broad aircraft discovery, field-level verification, and safe promotion | Complete — PR #4 merged; classification refinements merged in PR #5 |\n| 8 | Local metadata cross-check and conflict reporting | Complete — PR #6 merged; local-only CSV cross-check, no automatic download |\n| 9 | OpenSky CSV import and safe catalog merge | In progress — local CSV importer; no dataset download or redistribution until reuse conditions are clear |
 
 ## Phase 1 — Repository foundation and local catalog CLI
 
@@ -158,3 +158,16 @@ Further possibilities, subject to explicit user approval: optional desktop or we
 **Acceptance criteria:** malformed CSV and candidate input fail safely; code/model matches are reported separately; disagreements and duplicate matches are visible; empty/no-match data is not treated as verification; report output is separate from the trusted catalog.
 
 **Status:** Implementation is on `phase-8-local-metadata-cross-check`; review and CI pending.
+
+
+## Phase 9 — OpenSky CSV import and safe catalog merge
+
+**Goal:** Let the user build the actual local aircraft catalog from a locally obtained OpenSky aircraft metadata CSV without routing through Wikidata discovery or the independent-evidence promotion gate.
+
+**Implemented in this phase:** a dedicated `import-opensky` command; flexible model/manufacturer/type-code headers; grouping of aircraft-level rows into model records; merge into the selected catalog (default `data/aircraft.json`); exact-match provenance retention; preservation of conflicting records; dry-run support; and mocked CSV tests.
+
+**Data-use boundary:** the command does not download the CSV. OpenSky's aircraft database page says its database is unlicensed and offered as-is, and its current status page says it is not up to date. Do not add source data to the public repository until the user's intended use and redistribution rights are clear. A download-and-commit GitHub Actions workflow is intentionally deferred rather than assuming permission.
+
+**Acceptance criteria:** local CSV import works without Wikidata; repeated aircraft rows collapse to model-level entries; missing codes remain missing; conflicting values are not overwritten; import is marked unverified; dry-run does not modify output; malformed/empty files do not modify the catalog.
+
+**Status:** Implementation under review in PR #7. No OpenSky data has been downloaded, bundled, or added to the repository.

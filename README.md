@@ -129,6 +129,24 @@ python -m aircraft_explorer discover --output /tmp/aircraft-candidates.json
 
 Discovery results are explicitly marked `verification_status: "discovered"` and classified as `model_candidate`, `individual_aircraft`, or `ambiguous`. Classification uses Wikidata class labels, descriptions, and identifier-shaped labels to flag likely serial numbers and registrations, and generic descriptions such as "aircraft" remain ambiguous. These are conservative heuristics, not proof of identity: review uncertain records against independent sources. All classes remain in `data/candidates.json` with classification reasons, while promotion blocks records classified as individual aircraft or ambiguous. The trusted `data/aircraft.json` catalog is not changed by discovery.
 
+### `import-opensky`
+
+Import a locally obtained OpenSky aircraft metadata CSV into the selected catalog. Unlike `discover` and `promote`, this command does not query Wikidata and does not require candidate verification metadata.
+
+```bash
+python -m aircraft_explorer import-opensky --metadata /path/to/aircraft.csv --dry-run
+python -m aircraft_explorer import-opensky --metadata /path/to/aircraft.csv
+```
+
+- By default, the command merges into the selected catalog (normally `data/aircraft.json`). Use the global `--data PATH` option before the subcommand to select another catalog, or `--output PATH` to select the destination explicitly.
+- `--dry-run` prints the proposed counts without writing the catalog.
+- Aircraft-level rows are grouped into unique manufacturer/model/type-code records. Individual registrations are not copied into the catalog.
+- Exact matches are retained and gain an additional `source_records` provenance entry. Conflicting records are preserved separately and reported for review; no ICAO designator is inferred.
+- Imported records use `verification_status: "imported_unverified"`. This import is not independent verification and does not make records eligible for `promote`.
+- The command reads a local CSV only; it does not download data.
+
+**Data-use caution:** OpenSky's aircraft database page says the database is not up to date and is unlicensed, with no guarantees. Confirm that your intended use and redistribution of the particular file are permitted before committing imported records to a public repository. This project does not bundle the source CSV or automatically download it.
+
 ### `cross-check`
 
 Compares the discovery candidate JSON against an aircraft metadata CSV that you obtained separately. It makes no network requests, requires no API key, and does not modify the trusted catalog or the input files.

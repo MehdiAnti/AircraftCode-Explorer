@@ -17,7 +17,7 @@ A GitHub Pages site may be publicly accessible even when its source repository i
 
 The **Refresh OpenSky aircraft catalog and registry** workflow runs every Sunday at 06:00 UTC and also supports manual dispatch. It downloads the official OpenSky metadata CSV to temporary runner storage, runs the Python importer, validates the model JSON and registry shards, commits only `data/aircraft.json` when that catalog changes, and deploys the generated site.
 
-The CSV is not committed to the repository. Individual-aircraft registry shards are generated as compressed JSON files for the Pages artifact only, avoiding repeated large binary files in Git history. The registry is split by the first two normalized characters of registration, type code, or operator. The website loads a shard on demand and caches it for the current page session.
+The CSV is not committed to the repository. Individual-aircraft registry shards are generated as compressed JSON files for the Pages artifact only, avoiding repeated large binary files in Git history. The registry is split by the first two normalized characters of ICAO24 address, registration, type code, or operator. The website loads a shard on demand and caches it for the current page session.
 
 ## Search behavior
 

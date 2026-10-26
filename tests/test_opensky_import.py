@@ -34,9 +34,9 @@ class OpenSkyImportTests(unittest.TestCase):
 
     def test_exports_registration_typecode_and_operator_search_shards(self):
         path = self.make_csv(
-            "icao24,registration,manufacturericao,manufacturername,model,typecode,serialnumber,operator,operatoricao,owner\\n"
-            "abc123,N123AB,CESS,Cessna,172 Skyhawk,C172,12345,Example Air,EXA,Example Owner\\n"
-            "def456,N456CD,CESS,Cessna,172 Skyhawk,C172,67890,Example Air,EXA,Example Owner\\n"
+            "icao24,registration,manufacturericao,manufacturername,model,typecode,serialnumber,operator,operatoricao,owner\n"
+            "abc123,N123AB,CESS,Cessna,172 Skyhawk,C172,12345,Example Air,EXA,Example Owner\n"
+            "def456,N456CD,CESS,Cessna,172 Skyhawk,C172,67890,Example Air,EXA,Example Owner\n"
         )
         with tempfile.TemporaryDirectory() as directory:
             summary = write_opensky_registry_shards(path, directory, retrieved_at="2026-10-27T06:00:00Z")
@@ -52,6 +52,7 @@ class OpenSkyImportTests(unittest.TestCase):
             self.assertEqual(records[0]["operator"], "Example Air")
             self.assertEqual(records[0]["serial_number"], "12345")
             self.assertEqual(records[0]["verification_status"], "imported_unverified")
+
     def test_preserves_missing_code_and_model(self):
         path = self.make_csv("manufacturer,model,typecode\nPiper,PA-28,\nUnknown,,ZZZZ\n")
         records, _ = import_opensky_csv(path)

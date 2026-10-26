@@ -142,7 +142,7 @@ python -m aircraft_explorer status --json
 
 ### `import-opensky`
 
-Import a locally obtained OpenSky aircraft metadata CSV directly into the selected catalog, without independent source discovery or the `promote` verification gate.
+Import a locally obtained OpenSky aircraft metadata CSV directly into the selected catalog, without a network request or a separate candidate workflow.
 
 ```bash
 python -m aircraft_explorer import-opensky --metadata /path/to/aircraft.csv --dry-run
@@ -183,8 +183,6 @@ The catalog file is `data/aircraft.json` by default and contains a JSON list of 
 - `source_retrieved_at`: UTC retrieval timestamp
 - `verification_status`: discovery/verification state (for example, `discovered` or `verified`)
 - `field_evidence`: mapping of factual fields to source name, HTTPS URL, and retrieval timestamp; independent source-only evidence is not sufficient for promotion
-- `candidate_classification`: discovery triage result (`model_candidate`, `individual_aircraft`, or `ambiguous`)
-- `classification_reasons`: reasons for the discovery classification
 
 An illustrative schema-only record is shown below. Its placeholder values are not real aircraft data and should not be copied into the catalog as a factual record:
 
@@ -205,7 +203,7 @@ An illustrative schema-only record is shown below. Its placeholder values are no
 
 The loader normalizes whitespace in known text fields and uppercases designators. It validates the top-level list, record objects, and known field types. Records with the same source identity are deduplicated; a conservative fallback is used only when designator, model, and manufacturer are all present. Missing values remain unknown. Unknown source-specific fields are preserved.
 
-The legacy `update` command only returns items that have the independent source ICAO type designator property. The separate `discover` command also searches aircraft entities without that property and writes candidates separately. Model, manufacturer, and description values are source labels, not independently verified facts. The application does not infer or fabricate ICAO codes.
+The application does not infer or fabricate ICAO codes. Source labels and imported metadata are not independently verified facts.
 
 ## Development and tests
 

@@ -128,7 +128,7 @@ def cross_check_candidates(
         ]
         related_rows: list[dict[str, str | None]] = []
         for row in code_rows + model_rows:
-            if row not in related_rows:
+            if not any(row is existing for existing in related_rows):
                 related_rows.append(row)
 
         matched_fields: set[str] = set()

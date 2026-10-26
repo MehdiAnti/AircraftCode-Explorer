@@ -157,7 +157,7 @@ Further possibilities, subject to explicit user approval: optional desktop or we
 
 **Acceptance criteria:** malformed CSV and candidate input fail safely; code/model matches are reported separately; disagreements and duplicate matches are visible; empty/no-match data is not treated as verification; report output is separate from the trusted catalog.
 
-**Status:** Implementation is on `phase-8-local-metadata-cross-check`; review and CI pending.
+**Status:** Complete — PR [#6](https://github.com/MehdiAnti/AircraftCode-Explorer/pull/6) merged; the CI workflow passed on Python 3.10–3.13.
 
 
 ## Phase 9 — OpenSky CSV import and safe catalog merge

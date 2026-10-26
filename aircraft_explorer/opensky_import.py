@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import csv
+import gzip
+import json
+import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -155,3 +158,101 @@ def merge_opensky_records(
             existing["source_records"] = history
             enriched += 1
     return merged, {"added": added, "enriched": enriched}
+
+
+
+_REGISTRY_FIELDS = {
+    "icao24": "icao24",
+    "registration": "registration",
+    "manufacturericao": "manufacturer_icao",
+    "manufacturername": "manufacturer",
+    "model": "model",
+    "typecode": "icao_type_designator",
+    "serialnumber": "serial_number",
+    "linenumber": "line_number",
+    "icaoaircrafttype": "icao_aircraft_type",
+    "operator": "operator",
+    "operatorcallsign": "operator_callsign",
+    "operatoricao": "operator_icao",
+    "operatoriata": "operator_iata",
+    "owner": "owner",
+    "testreg": "test_registration",
+    "registered": "registered",
+    "reguntil": "registration_until",
+    "status": "status",
+    "built": "built",
+    "firstflightdate": "first_flight_date",
+    "seatconfiguration": "seat_configuration",
+    "engines": "engines",
+    "modes": "modes",
+    "adsb": "adsb",
+    "acars": "acars",
+    "notes": "notes",
+    "categorydescription": "category_description",
+}
+
+
+def write_opensky_registry_csv(
+    csv_path: str | Path,
+    output_path: str | Path,
+    *,
+    retrieved_at: str | None = None,
+) -> dict[str, Any]:
+    """Stream individual OpenSky airframes to a compact gzip-compressed JSON array."""
+    source_path = Path(csv_path)
+    destination = Path(output_path)
+    timestamp = retrieved_at or datetime.now(timezone.utc).isoformat()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_name(f".{destination.name}.tmp")
+    rows_read = records_written = rows_skipped = 0
+    try:
+        with source_path.open("r", encoding="utf-8-sig", newline="") as source:
+            reader = csv.DictReader(source)
+            if not reader.fieldnames:
+                raise OpenSkyImportError("OpenSky metadata CSV is empty or has no header row")
+            headers = {_header_key(h): h for h in reader.fieldnames if isinstance(h, str)}
+            if not any(key in headers for key in ("registration", "icao24")):
+                raise OpenSkyImportError("OpenSky CSV needs a registration or icao24 column")
+            with gzip.open(temporary, "wt", encoding="utf-8", newline="") as output:
+                output.write("[")
+                first = True
+                for row in reader:
+                    if not isinstance(row, dict):
+                        rows_skipped += 1
+                        continue
+                    rows_read += 1
+                    record = {
+                        target: _clean(row.get(headers[source]))
+                        for source, target in _REGISTRY_FIELDS.items()
+                        if source in headers
+                    }
+                    if not any(record.values()):
+                        rows_skipped += 1
+                        continue
+                    record["source"] = "OpenSky Aircraft Metadata"
+                    record["source_url"] = OPENSKY_SOURCE_URL
+                    record["source_retrieved_at"] = timestamp
+                    record["verification_status"] = "imported_unverified"
+                    if not first:
+                        output.write(",")
+                    json.dump(record, output, ensure_ascii=False, separators=(",", ":"))
+                    first = False
+                    records_written += 1
+                output.write("]")
+        os.replace(temporary, destination)
+    except UnicodeDecodeError as exc:
+        temporary.unlink(missing_ok=True)
+        raise OpenSkyImportError("OpenSky metadata CSV must be UTF-8 encoded") from exc
+    except csv.Error as exc:
+        temporary.unlink(missing_ok=True)
+        raise OpenSkyImportError(f"Could not parse metadata CSV: {exc}") from exc
+    except OSError:
+        temporary.unlink(missing_ok=True)
+        raise
+    return {
+        "rows_read": rows_read,
+        "rows_skipped": rows_skipped,
+        "registry_records": records_written,
+        "output_file": destination.name,
+        "source_retrieved_at": timestamp,
+    }

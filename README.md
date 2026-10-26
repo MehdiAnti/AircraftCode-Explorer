@@ -131,21 +131,21 @@ Discovery results are explicitly marked `verification_status: "discovered"` and 
 
 ### `import-opensky`
 
-Import a locally obtained OpenSky aircraft metadata CSV into the selected catalog. Unlike `discover` and `promote`, this command does not query Wikidata and does not require candidate verification metadata.
+Import a locally obtained OpenSky aircraft metadata CSV directly into the selected catalog, without Wikidata discovery or the `promote` verification gate.
 
 ```bash
 python -m aircraft_explorer import-opensky --metadata /path/to/aircraft.csv --dry-run
 python -m aircraft_explorer import-opensky --metadata /path/to/aircraft.csv
 ```
 
-- By default, the command merges into the selected catalog (normally `data/aircraft.json`). Use the global `--data PATH` option before the subcommand to select another catalog, or `--output PATH` to select the destination explicitly.
-- `--dry-run` prints the proposed counts without writing the catalog.
-- Aircraft-level rows are grouped into unique manufacturer/model/type-code records. Individual registrations are not copied into the catalog.
-- Exact matches are retained and gain an additional `source_records` provenance entry. Conflicting records are preserved separately and reported for review; no ICAO designator is inferred.
-- Imported records use `verification_status: "imported_unverified"`. This import is not independent verification and does not make records eligible for `promote`.
-- The command reads a local CSV only; it does not download data.
+- By default, the command merges into the selected catalog (normally `data/aircraft.json`). Use global `--data PATH` before the subcommand to choose a different catalog, or `--output PATH` to set the destination.
+- `--dry-run` reports proposed counts without writing.
+- Aircraft-level rows are grouped into unique manufacturer/model/type-code records; individual registrations are not copied.
+- Exact matches retain existing fields and gain a `source_records` provenance entry. Conflicting records remain separate for review; no ICAO code is inferred.
+- Imported records are marked `imported_unverified`; this does not make them eligible for `promote`.
+- The command reads a local CSV only and never downloads it.
 
-**Data-use caution:** OpenSky's aircraft database page says the database is not up to date and is unlicensed, with no guarantees. Confirm that your intended use and redistribution of the particular file are permitted before committing imported records to a public repository. This project does not bundle the source CSV or automatically download it.
+**Data-use caution:** confirm that the particular file and your intended use/redistribution are permitted before committing imported data to this public repository. This project does not bundle the CSV or automatically download it.
 
 ### `cross-check`
 

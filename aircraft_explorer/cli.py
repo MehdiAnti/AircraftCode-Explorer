@@ -110,11 +110,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     opensky_parser.add_argument(
         "--output", default=None,
-        help="Catalog JSON path (default: the selected catalog, normally data/aircraft.json).",
+        help="Catalog JSON path (default: selected catalog, normally data/aircraft.json).",
     )
     opensky_parser.add_argument(
         "--dry-run", action="store_true",
-        help="Show the proposed import summary without writing the catalog.",
+        help="Show proposed import counts without writing the catalog.",
     )
 
     promote_parser = subparsers.add_parser(
@@ -236,20 +236,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 2
         print(
             f"OpenSky CSV rows: {import_summary['rows_read']}; "
-            f"usable unique model/type records: {len(imported)}; "
+            f"unique model/type records: {len(imported)}; "
             f"skipped rows: {import_summary['rows_skipped']}; "
             f"records added: {merge_summary['added']}; "
-            f"existing records enriched with OpenSky provenance: {merge_summary['enriched']}; "
-            f"code conflicts requiring review: {import_summary['conflicting_codes']}."
+            f"records enriched with provenance: {merge_summary['enriched']}; "
+            f"conflicting type codes: {import_summary['conflicting_codes']}."
         )
         if args.dry_run:
             print(f"Dry run only; catalog not changed. Target: {output_path}")
         else:
             print(f"Catalog updated: {output_path}")
-        print(
-            "Imported OpenSky records remain unverified; this command does not satisfy "
-            "the independent-evidence promotion gate."
-        )
+        print("Imported OpenSky records remain unverified; this does not satisfy the promote gate.")
         return 0
 
     if args.command == "promote":

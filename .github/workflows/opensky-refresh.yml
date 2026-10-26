@@ -1,0 +1,88 @@
+name: Refresh OpenSky aircraft catalog
+
+on:
+  schedule:
+    - cron: "0 6 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: opensky-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run catalog tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Download OpenSky metadata CSV
+        env:
+          OPENSKY_CSV_URL: https://opensky-network.org/datasets/metadata/aircraftDatabase.csv
+        run: |
+          curl --fail --location --silent --show-error \
+            --retry 3 --retry-delay 5 --retry-all-errors \
+            "$OPENSKY_CSV_URL" \
+            --output "$RUNNER_TEMP/aircraftDatabase.csv"
+          test -s "$RUNNER_TEMP/aircraftDatabase.csv"
+
+      - name: Import CSV into JSON catalog
+        run: |
+          python -m aircraft_explorer import-opensky \
+            --metadata "$RUNNER_TEMP/aircraftDatabase.csv" \
+            --output data/aircraft.json
+
+      - name: Validate generated catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from aircraft_explorer.core import load_aircraft
+
+          path = Path("data/aircraft.json")
+          with path.open("r", encoding="utf-8") as file:
+              payload = json.load(file)
+          if not isinstance(payload, list) or not payload:
+              raise SystemExit("Generated catalog must be a non-empty JSON array.")
+          if any(not isinstance(record, dict) for record in payload):
+              raise SystemExit("Generated catalog contains a non-object record.")
+          records = load_aircraft(path)
+          if len(records) != len(payload):
+              raise SystemExit("Catalog validation changed the record count.")
+          print(f"Validated {len(records):,} catalog records.")
+          PY
+
+      - name: Commit catalog JSON when changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/aircraft.json
+          if git diff --cached --quiet; then
+            echo "Catalog JSON is unchanged; no commit is needed."
+          else
+            git commit -m "data: refresh OpenSky aircraft catalog"
+            git push origin HEAD:main
+          fi
+
+  deploy-pages:
+    needs: refresh
+    uses: ./.github/workflows/pages.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write

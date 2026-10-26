@@ -45,7 +45,7 @@ jobs:
         run: |
           python -m aircraft_explorer import-opensky \
             --metadata "$RUNNER_TEMP/aircraftDatabase.csv" \
-            --output data/models.json \
+            --output data/aircraft.json \
             --registry-dir "$RUNNER_TEMP/registry"
 
       - name: Validate generated catalog, full registry export, and search shards
@@ -56,7 +56,7 @@ jobs:
           from pathlib import Path
           from aircraft_explorer.core import load_aircraft
 
-          path = Path("data/models.json")
+          path = Path("data/aircraft.json")
           with path.open("r", encoding="utf-8") as file:
               payload = json.load(file)
           if not isinstance(payload, list) or not payload:
@@ -99,7 +99,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/models.json
+          git add data/aircraft.json
           if git diff --cached --quiet; then
             echo "Model catalog JSON is unchanged; no commit is needed."
           else
@@ -141,17 +141,17 @@ jobs:
         run: |
           mkdir -p _site/data
           cp index.html styles.css app.js _site/
-          cp data/models.json _site/data/models.json
-          cp "$RUNNER_TEMP/registry/aircraft-registry.json.gz" _site/data/aircraft.json.gz
-          gzip --decompress --stdout "$RUNNER_TEMP/registry/aircraft-registry.json.gz" > _site/data/aircraft.json
-          test -s _site/data/aircraft.json
-          python -m json.tool _site/data/aircraft.json > /dev/null
+          cp data/aircraft.json _site/data/aircraft.json
+          cp "$RUNNER_TEMP/registry/aircraft-registry.json.gz" _site/data/airframes.json.gz
+          gzip --decompress --stdout "$RUNNER_TEMP/registry/aircraft-registry.json.gz" > _site/data/airframes.json
+          test -s _site/data/airframes.json
+          python -m json.tool _site/data/airframes.json > /dev/null
           python - <<'PY'
           import json
           from pathlib import Path
-          with Path("_site/data/models.json").open("r", encoding="utf-8") as file:
-              models = json.load(file)
           with Path("_site/data/aircraft.json").open("r", encoding="utf-8") as file:
+              models = json.load(file)
+          with Path("_site/data/airframes.json").open("r", encoding="utf-8") as file:
               airframes = json.load(file)
           if not isinstance(models, list) or not models:
               raise SystemExit("Published model catalog must be a non-empty JSON array.")

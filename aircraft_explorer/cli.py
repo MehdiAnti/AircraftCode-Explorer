@@ -189,6 +189,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 shard_count = sum(len(items) for items in registry_summary["shards"].values())
                 print(
                     f"Individual-aircraft registry: {registry_summary['registry_records']} records; "
+                    f"full compressed JSON: {registry_summary['registry_export']}; "
                     f"{shard_count} compressed search shards written to {args.registry_dir}."
                 )
         print("Imported OpenSky records remain unverified; use review and verify after independent manual review.")

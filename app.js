@@ -207,7 +207,7 @@ async function loadRegistryShard(mode, firstCharacter) {
   if (registryCache.has(key)) return registryCache.get(key);
   const request = (async () => {
     const response = await fetch(REGISTRY_URL + "/" + mode + "/" + firstCharacter + ".json.gz", {
-      cache: "force-cache",
+      cache: "no-cache",
       headers: { Accept: "application/gzip, application/json" },
     });
     if (response.status === 404) return [];
@@ -284,6 +284,7 @@ function scheduleSearch() {
 }
 async function loadCatalog() {
   if (loading) return;
+  registryCache.clear();
   loading = true;
   loadError = null;
   el.refresh.disabled = true;
@@ -318,6 +319,7 @@ async function loadCatalog() {
 }
 el.search.addEventListener("input", scheduleSearch);
 el.mode.addEventListener("change", () => {
+  el.sort.closest(".sort-control").hidden = el.mode.value !== "catalog";
   const placeholders = {
     catalog: "Search model, manufacturer, ICAO code…",
     icao24: "Enter an ICAO24 address, e.g. abc123…",
@@ -328,6 +330,7 @@ el.mode.addEventListener("change", () => {
   el.search.placeholder = placeholders[el.mode.value] || placeholders.catalog;
   filter();
 });
+el.sort.closest(".sort-control").hidden = el.mode.value !== "catalog";
 el.sort.addEventListener("change", filter);
 el.refresh.addEventListener("click", loadCatalog);
 el.clear.addEventListener("click", () => {

@@ -1,12 +1,12 @@
 # AircraftCode-Explorer
 
-AircraftCode-Explorer is a Python aircraft catalog with a static HTML/CSS/JavaScript explorer. Search models by ICAO type designator, model, manufacturer, or description, or look up individual airframes by registration, ICAO type code, and operator. The Python CLI imports metadata, tracks provenance, reports conflicts, and records manual verification based on independent source evidence.
+AircraftCode-Explorer is a Python aircraft catalog with a static HTML/CSS/JavaScript explorer. Search models by ICAO type designator, model, manufacturer, or description, or look up individual airframes by registration, ICAO24 address, ICAO type code, and operator. The Python CLI imports metadata, tracks provenance, reports conflicts, and records manual verification based on independent source evidence.
 
 Imported source data is not automatically verified. Review records against independent sources before relying on them operationally.
 
 ## Web explorer
 
-The website provides model search, registration/type-code/operator lookup, sorting, pagination, catalog statistics, and expandable aircraft cards. Select a search mode, enter at least two characters for registry lookup, then expand a result to inspect its registration, ICAO24, serial number, operator, dates, equipment, and source metadata where available. Registry lookup uses compressed two-character-prefix shards, so the browser downloads only the relevant slice. The **Refresh data** button reloads the latest model catalog JSON; it does not start GitHub Actions and contains no GitHub credentials.
+The website provides model search, registration/ICAO24/type-code/operator lookup, sorting, pagination, catalog statistics, and expandable aircraft cards. Select a search mode, enter at least two characters for registry lookup, then expand a result to inspect its registration, ICAO24, serial number, operator, dates, equipment, and source metadata where available. Registry lookup uses compressed two-character-prefix shards, so the browser downloads only the relevant slice. The **Refresh data** button reloads the latest model catalog JSON; it does not start GitHub Actions and contains no GitHub credentials.
 
 To publish it, open repository **Settings → Pages** and select **GitHub Actions** as the build and deployment source. After the first successful deployment, use the Pages URL shown in the **Deploy aircraft explorer website** workflow. Confirm repository plan and intended visibility first: GitHub Pages content may be publicly accessible even when the source repository is private.
 
@@ -159,7 +159,7 @@ python -m aircraft_explorer import-opensky --metadata /path/to/aircraft.csv --re
 
 - By default, the command merges into the selected catalog (normally `data/aircraft.json`). Use global `--data PATH` before the subcommand to choose a different catalog, or `--output PATH` to set the destination.
 - `--dry-run` reports proposed counts without writing.
-- Aircraft-level rows are grouped into unique manufacturer/model/type-code records in `data/aircraft.json`; individual registrations are not mixed into model-level records. Pass `--registry-dir PATH` to additionally export individual aircraft into compressed registration, type-code, and operator search shards.
+- Aircraft-level rows are grouped into unique manufacturer/model/type-code records in `data/aircraft.json`; individual registrations are not mixed into model-level records. Pass `--registry-dir PATH` to additionally export individual aircraft into compressed ICAO24, registration, type-code, and operator search shards.
 - Exact matches retain existing fields and gain a `source_records` provenance entry. Conflicting records remain separate for review; no ICAO code is inferred.
 - Imported records are marked `imported_unverified`; this does not make them verified.
 - The command reads a local CSV only and never downloads it.

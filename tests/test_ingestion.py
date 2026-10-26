@@ -13,20 +13,20 @@ class VerificationTests(unittest.TestCase):
             "retrieved_at": "2026-10-26T12:00:00Z",
         }
 
-    def test_wikidata_only_evidence_is_not_enough(self):
+    def test_opensky_only_evidence_is_not_enough(self):
         record = {
             "verification_status": "verified",
             "model": "Example model",
             "field_evidence": {
-                "model": [self.evidence("Wikidata", "https://www.wikidata.org/wiki/Q123")]
+                "model": [self.evidence("OpenSky Aircraft Metadata", "https://opensky-network.org/data/aircraft")]
             },
         }
-        self.assertTrue(any("independent non-Wikidata" in issue for issue in verification_issues(record)))
+        self.assertTrue(any("independent evidence" in issue for issue in verification_issues(record)))
 
     def test_missing_designator_is_allowed_when_other_fields_are_verified(self):
         record = {
-            "source": "Wikidata",
-            "source_id": "Q123",
+            "source": "OpenSky Aircraft Metadata",
+            "source_id": None,
             "verification_status": "verified",
             "model": "Example model",
             "manufacturer": "Example maker",
@@ -92,6 +92,20 @@ class VerificationTests(unittest.TestCase):
         self.assertTrue(
             any("candidate classification" in issue for issue in verification_issues(record))
         )
+
+    def test_manual_verification_adds_field_evidence(self):
+        from aircraft_explorer.ingestion import verify_record
+
+        record = {"model": "Cessna 172", "manufacturer": "Cessna", "icao_type_designator": "C172", "source": "OpenSky Aircraft Metadata", "verification_status": "imported_unverified"}
+        verified = verify_record(record, source_name="FAA Aircraft Registry", source_url="https://www.faa.gov/aircraft", retrieved_at="2026-10-27T12:00:00Z")
+        self.assertEqual(verified["verification_status"], "verified")
+        self.assertEqual(set(verified["field_evidence"]), {"model", "manufacturer", "icao_type_designator"})
+        self.assertEqual(record["verification_status"], "imported_unverified")
+
+    def test_manual_verification_rejects_same_import_source(self):
+        from aircraft_explorer.ingestion import verify_record
+        with self.assertRaises(ValueError):
+            verify_record({"model": "Cessna 172", "source": "OpenSky Aircraft Metadata"}, source_name="OpenSky Aircraft Metadata", source_url="https://opensky-network.org/data/aircraft", retrieved_at="2026-10-27T12:00:00Z")
 
     def test_rejects_missing_verification_status(self):
         accepted, rejected = verified_records([{"model": "Example model"}])

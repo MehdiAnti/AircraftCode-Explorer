@@ -168,7 +168,7 @@ Further possibilities, subject to explicit user approval: optional desktop or we
 **Scope:**
 - Precompute searchable text and sort order once; debounce model-catalog input.
 - Add separate search modes for the model catalog, registration, ICAO24 address, ICAO type code, and operator.
-- Generate compressed JSON registry shards for ICAO24, registration, type code, and operator from the OpenSky CSV using the existing Python importer. Shards are partitioned by two-character field prefixes and contain available aircraft-level details such as ICAO24, registration, manufacturer, model, type code, serial/line number, operator/callsign, owner, dates, equipment flags, notes, and source provenance.
+- Generate compressed JSON registry shards for ICAO24, registration, type code, and operator from the OpenSky CSV using the existing Python importer. Shards are partitioned by two-character field prefixes for ICAO24 address, registration, type code, and operator and contain available aircraft-level details such as ICAO24, registration, manufacturer, model, type code, serial/line number, operator/callsign, owner, dates, equipment flags, notes, and source provenance.
 - Load registry shards on demand, cache loaded shards in the browser session, and keep the existing compact result cards. Clicking a card expands its details.
 - Keep individual aircraft records separate from grouped model records in `data/aircraft.json`.
 - Generate registry shards as part of the Pages artifact rather than committing them to Git history, preventing large binary registry updates from accumulating every week.

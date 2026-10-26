@@ -61,6 +61,21 @@ class ParseWikidataResponseTests(unittest.TestCase):
         self.assertEqual(record["manufacturer"], "Cessna")
         self.assertEqual(record["description"], "single-engine aircraft")
 
+    def test_malformed_icao_designator_is_rejected(self):
+        payload = {
+            "results": {
+                "bindings": [
+                    {
+                        "item": binding("http://www.wikidata.org/entity/Q999"),
+                        "itemLabel": binding("Invalid designator"),
+                        "icao": binding("not-a-wikidata-id"),
+                    }
+                ]
+            }
+        }
+
+        self.assertEqual(parse_wikidata_response(payload), [])
+
     def test_missing_bindings_raises_clear_error(self):
         with self.assertRaises(WikidataError):
             parse_wikidata_response({})

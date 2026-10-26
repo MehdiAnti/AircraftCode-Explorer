@@ -1,8 +1,16 @@
 # AircraftCode-Explorer
 
-AircraftCode-Explorer is a small Python command-line tool for searching a local aircraft catalog by ICAO type designator, model, manufacturer, or description. It can import local aircraft metadata, track provenance, report conflicts, and record manual verification based on independent source evidence.
+AircraftCode-Explorer is a Python aircraft catalog with a static HTML/CSS/JavaScript explorer. Search by ICAO type designator, model, manufacturer, or description. The Python CLI imports metadata, tracks provenance, reports conflicts, and records manual verification based on independent source evidence.
 
 Imported source data is not automatically verified. Review records against independent sources before relying on them operationally.
+
+## Web explorer
+
+The website provides text search, sorting, pagination, catalog statistics, and source details. Its **Refresh data** button reloads the latest published `data/aircraft.json`; it does not start GitHub Actions and contains no GitHub credentials.
+
+To publish it, open repository **Settings → Pages** and select **GitHub Actions** as the build and deployment source. After the first successful deployment, use the Pages URL shown in the **Deploy aircraft explorer website** workflow. Confirm repository plan and intended visibility first: GitHub Pages content may be publicly accessible even when the source repository is private.
+
+The **Refresh OpenSky aircraft catalog** workflow runs every Sunday at **06:00 UTC** and can be run manually from the Actions tab. It downloads the official OpenSky CSV to temporary runner storage, imports and validates it, commits only `data/aircraft.json` when it changes, then deploys the updated site. The CSV itself is not committed to the repository. The workflow needs `contents: write` and Pages deployment permissions.
 
 ## Requirements
 
@@ -155,7 +163,7 @@ python -m aircraft_explorer import-opensky --metadata /path/to/aircraft.csv
 - Imported records are marked `imported_unverified`; this does not make them verified.
 - The command reads a local CSV only and never downloads it.
 
-**Data-use caution:** confirm that the particular file and your intended use/redistribution are permitted before committing imported data to this public repository. This project does not bundle the CSV or automatically download it.
+**Data-use caution:** confirm that the source file and intended use/redistribution are permitted before publishing imported records. The scheduled GitHub Actions workflow downloads the CSV to temporary runner storage and commits only the generated JSON catalog; it does not store the CSV in the repository.
 
 ### `cross-check`
 

@@ -6,6 +6,7 @@ const PAGE_SIZE = 30;
 const SEARCH_DELAY = 120;
 const SORT_FIELDS = ["manufacturer", "model", "icao_type_designator", "description"];
 const REGISTRY_FIELDS = {
+  icao24: "icao24",
   registration: "registration",
   typecode: "icao_type_designator",
   operator: "operator",
@@ -319,6 +320,7 @@ el.search.addEventListener("input", scheduleSearch);
 el.mode.addEventListener("change", () => {
   const placeholders = {
     catalog: "Search model, manufacturer, ICAO code…",
+    icao24: "Enter an ICAO24 address, e.g. abc123…",
     registration: "Enter a registration, e.g. N123AB…",
     typecode: "Enter an ICAO type code, e.g. B738…",
     operator: "Enter an operator name, e.g. Lufthansa…",

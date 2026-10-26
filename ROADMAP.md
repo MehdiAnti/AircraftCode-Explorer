@@ -158,4 +158,30 @@ Further possibilities, subject to explicit user approval: optional desktop or we
 
 **Setup note:** Repository Settings → Pages must use GitHub Actions. Check the repository plan and site visibility before enabling Pages, because a Pages site may be publicly accessible even when the source repository is private.
 
-**Verification:** Pending pull request review and GitHub Actions runs. No live OpenSky download or deployment is claimed before the workflow is run.
+**Status:** Merged in PR #9. Initial live Pages deployment and scheduled refresh should be confirmed in GitHub Actions; no successful live OpenSky run is assumed from the merge alone.
+
+
+
+## Phase 12 — Search performance
+
+**Goal:** Keep the existing web explorer responsive as the model catalog grows.
+
+**Scope:** Debounce search input, precompute normalized searchable text, cache sort orders, and keep rendering limited to 30 results per page.
+
+**Status:** Merged in PR #10. The live search experience should be checked on the deployed website.
+
+## Phase 13 — Individual-aircraft registry lookup
+
+**Goal:** Add registration, ICAO24 address, ICAO type-code, and operator lookup without mixing individual aircraft into grouped model records.
+
+**Scope:**
+- Add separate website search modes for registration, ICAO24, ICAO type code, and operator.
+- Keep the existing visual design and use expandable cards to show additional available aircraft fields.
+- Generate compressed JSON registry shards from the OpenSky CSV, partitioned by two-character field prefixes. Load matching shards on demand and cache them in the browser session.
+- Export available registration, ICAO24, manufacturer, model, type code, serial/line number, operator/callsign, owner, registration and flight dates, equipment flags, notes, and source provenance.
+- Generate registry shards into the GitHub Pages artifact rather than committing them to Git history. Continue committing only model-level `data/aircraft.json` on scheduled refresh.
+- Update tests, Actions workflows, README, and web documentation.
+
+**Search behavior:** Registry search requires at least two letters or digits and performs case-insensitive prefix matching with punctuation ignored. The Refresh data button reloads the latest model catalog JSON; it does not trigger Actions.
+
+**Status:** Implementation in PR #11; awaiting review and CI. The live OpenSky download and GitHub Pages deployment must be checked after merge.

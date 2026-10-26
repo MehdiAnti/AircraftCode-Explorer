@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#071522">
-  <meta name="description" content="Search aircraft by ICAO type code, model, manufacturer, and description.">
+  <meta name="description" content="Search aircraft by model, ICAO type code, registration, or operator.">
   <title>Aircraft Explorer</title>
   <link rel="stylesheet" href="styles.css">
   <script src="app.js" defer></script>
@@ -20,7 +20,7 @@
         <div>
           <p class="eyebrow">THE AIRCRAFT CATALOG</p>
           <h1>Find your <span>aircraft.</span></h1>
-          <p class="hero-description">Search aircraft models, manufacturers and ICAO type designators in one place.</p>
+          <p class="hero-description">Search aircraft models or look up individual aircraft by registration, ICAO type code, or operator.</p>
           <a class="source-link" href="https://opensky-network.org/datasets/metadata/aircraftDatabase.csv" target="_blank" rel="noreferrer">Data source: OpenSky Network ↗</a>
         </div>
         <div class="hero-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="plane-symbol">✈</div><span class="art-label art-top">AIRCRAFT / INDEX</span><span class="art-label art-bottom">GLOBAL METADATA</span></div>
@@ -34,6 +34,7 @@
       <section class="catalog-panel" aria-labelledby="catalog-heading">
         <div class="section-heading"><div><p class="eyebrow">EXPLORE DATABASE</p><h2 id="catalog-heading">Aircraft catalog</h2></div><button id="refresh-button" class="refresh-button" type="button"><span aria-hidden="true">↻</span> Refresh data</button></div>
         <div class="search-row">
+          <label class="sort-control mode-control" for="search-mode"><span>Search in</span><select id="search-mode"><option value="catalog">Aircraft catalog</option><option value="registration">Registration</option><option value="icao24">ICAO24 address</option><option value="typecode">ICAO type code</option><option value="operator">Operator</option></select></label>
           <label class="search-box" for="search-input"><span aria-hidden="true" class="search-icon">⌕</span><input id="search-input" type="search" placeholder="Search model, manufacturer, ICAO code…" autocomplete="off"><kbd>/</kbd></label>
           <label class="sort-control" for="sort-select"><span>Sort by</span><select id="sort-select"><option value="manufacturer">Manufacturer</option><option value="model">Model</option><option value="icao_type_designator">ICAO code</option><option value="description">Description</option></select></label>
         </div>

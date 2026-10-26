@@ -20,7 +20,7 @@ from .csv_export import write_csv
 from .ingestion import verify_record
 from .metadata import MetadataError, cross_check_candidates, load_metadata_csv, write_cross_check_report
 from .review import catalog_review, write_review_report
-from .opensky_import import OpenSkyImportError, import_opensky_csv, merge_opensky_records
+from .opensky_import import OpenSkyImportError, import_opensky_csv, merge_opensky_records, write_opensky_registry_shards
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -102,6 +102,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--dry-run", action="store_true",
         help="Show proposed import counts without writing the catalog.",
     )
+    opensky_parser.add_argument(
+        "--registry-dir", default=None,
+        help="Optional directory for compressed individual-aircraft registry search shards.",
+    )
 
     review_parser = subparsers.add_parser("review", help="Summarize verification states and ICAO type-code conflicts.")
     review_parser.add_argument("--json", action="store_true", help="Print the full review report as JSON.")
@@ -161,6 +165,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 raise OpenSkyImportError(
                     "The CSV contained no usable model/type-code records; catalog was not changed."
                 )
+            registry_summary = None
+            if not args.dry_run and args.registry_dir:
+                registry_summary = write_opensky_registry_shards(args.metadata, args.registry_dir)
             if not args.dry_run:
                 save_aircraft(merged, output_path)
         except (OSError, ValueError, json.JSONDecodeError, OpenSkyImportError) as exc:
@@ -178,6 +185,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"Dry run only; catalog not changed. Target: {output_path}")
         else:
             print(f"Catalog updated: {output_path}")
+            if registry_summary is not None:
+                shard_count = sum(len(items) for items in registry_summary["shards"].values())
+                print(
+                    f"Individual-aircraft registry: {registry_summary['registry_records']} records; "
+                    f"{shard_count} compressed search shards written to {args.registry_dir}."
+                )
         print("Imported OpenSky records remain unverified; use review and verify after independent manual review.")
         return 0
 

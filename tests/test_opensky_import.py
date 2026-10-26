@@ -1,11 +1,13 @@
 """Tests for local OpenSky CSV importing and merging."""
 
+import gzip
+import json
 import tempfile
 import unittest
 from pathlib import Path
 
 from aircraft_explorer.opensky_import import (
-    OPENSKY_SOURCE_URL, OpenSkyImportError, import_opensky_csv, merge_opensky_records,
+    OPENSKY_SOURCE_URL, OpenSkyImportError, import_opensky_csv, merge_opensky_records, write_opensky_registry_shards,
 )
 
 
@@ -29,6 +31,28 @@ class OpenSkyImportTests(unittest.TestCase):
         self.assertEqual(records[0]["source_url"], OPENSKY_SOURCE_URL)
         self.assertEqual(records[0]["verification_status"], "imported_unverified")
         self.assertEqual(summary["rows_read"], 2)
+
+    def test_exports_registration_typecode_and_operator_search_shards(self):
+        path = self.make_csv(
+            "icao24,registration,manufacturericao,manufacturername,model,typecode,serialnumber,operator,operatoricao,owner\n"
+            "abc123,N123AB,CESS,Cessna,172 Skyhawk,C172,12345,Example Air,EXA,Example Owner\n"
+            "def456,N123CD,CESS,Cessna,172 Skyhawk,C172,67890,Example Air,EXA,Example Owner\n"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            summary = write_opensky_registry_shards(path, directory, retrieved_at="2026-10-27T06:00:00Z")
+            self.assertEqual(summary["registry_records"], 2)
+            self.assertTrue((Path(directory) / "icao24" / "ab.json.gz").exists())
+            self.assertTrue((Path(directory) / "registration" / "n1.json.gz").exists())
+            self.assertTrue((Path(directory) / "typecode" / "c1.json.gz").exists())
+            self.assertTrue((Path(directory) / "operator" / "ex.json.gz").exists())
+            with gzip.open(Path(directory) / "registration" / "n1.json.gz", "rt", encoding="utf-8") as file:
+                records = json.load(file)
+            self.assertEqual(len(records), 2)
+            self.assertEqual(records[0]["registration"], "N123AB")
+            self.assertEqual(records[0]["icao_type_designator"], "C172")
+            self.assertEqual(records[0]["operator"], "Example Air")
+            self.assertEqual(records[0]["serial_number"], "12345")
+            self.assertEqual(records[0]["verification_status"], "imported_unverified")
 
     def test_preserves_missing_code_and_model(self):
         path = self.make_csv("manufacturer,model,typecode\nPiper,PA-28,\nUnknown,,ZZZZ\n")

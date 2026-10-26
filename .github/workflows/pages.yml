@@ -10,7 +10,6 @@ on:
       - "data/aircraft.json"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
-  workflow_call:
 
 permissions:
   contents: read
@@ -23,6 +22,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.actor != 'github-actions[bot]'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -33,12 +33,37 @@ jobs:
         with:
           ref: main
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run catalog tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Download OpenSky metadata CSV
+        env:
+          OPENSKY_CSV_URL: https://opensky-network.org/datasets/metadata/aircraftDatabase.csv
+        run: |
+          curl --fail --location --silent --show-error \
+            --retry 3 --retry-delay 5 --retry-all-errors \
+            "$OPENSKY_CSV_URL" \
+            --output "$RUNNER_TEMP/aircraftDatabase.csv"
+          test -s "$RUNNER_TEMP/aircraftDatabase.csv"
+
+      - name: Generate compressed aircraft registry shards
+        run: |
+          mkdir -p _site/data
+          python -m aircraft_explorer import-opensky \
+            --metadata "$RUNNER_TEMP/aircraftDatabase.csv" \
+            --output "$RUNNER_TEMP/aircraft-catalog.json" \
+            --registry-dir _site/data/registry
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Prepare website artifact
+      - name: Prepare website files
         run: |
-          mkdir -p _site/data
           cp index.html styles.css app.js _site/
           cp data/aircraft.json _site/data/aircraft.json
 

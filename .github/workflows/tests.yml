@@ -25,3 +25,5 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
+      - name: Check web explorer JavaScript syntax
+        run: node --check app.js

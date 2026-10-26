@@ -30,7 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--data",
-        help="Path to an aircraft JSON file (defaults to data/models.json).",
+        help="Path to an aircraft JSON file (defaults to data/aircraft.json).",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -96,7 +96,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     opensky_parser.add_argument(
         "--output", default=None,
-        help="Catalog JSON path (default: selected catalog, normally data/models.json).",
+        help="Catalog JSON path (default: selected catalog, normally data/aircraft.json).",
     )
     opensky_parser.add_argument(
         "--dry-run", action="store_true",

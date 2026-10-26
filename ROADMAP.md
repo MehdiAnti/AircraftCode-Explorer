@@ -23,8 +23,8 @@ Build a maintainable aircraft catalog and explorer that supports searching by IC
 |---|---|---|
 | 1 | Repository foundation and local catalog CLI | Complete; execution not yet independently verified |
 | 2 | Unit tests and continuous integration | Verified — 14 tests passed on Python 3.10–3.13; awaiting user review |
-| 3 | Wikidata data refresh | Verified — 26 tests passed on Python 3.10–3.13; awaiting user review |
-| 4 | Data quality, normalization, and provenance | Planned |
+| 3 | Wikidata data refresh | Complete — verified and approved by user |
+| 4 | Data quality, normalization, and provenance | Verified — 34 tests passed on Python 3.10–3.13; awaiting user review |
 | 5 | Documentation and release readiness | Planned |
 | 6 | Optional usability improvements | Planned |
 
@@ -92,23 +92,24 @@ Deliverables:
 
 **Verification results (2026-10-26):** An earlier run [#10](https://github.com/MehdiAnti/AircraftCode-Explorer/actions/runs/40338329794) failed because the tested commit predated the malformed-designator validation. The parser fix was subsequently verified in run [#11](https://github.com/MehdiAnti/AircraftCode-Explorer/actions/runs/40338582604). A dedicated regression test was then added in commit `648730bdeaf362cc2f3ae5d116ffa0df43467ba1`. GitHub Actions run [#14](https://github.com/MehdiAnti/AircraftCode-Explorer/actions/runs/40339675455) completed successfully on that commit. All four matrix jobs (Python 3.10, 3.11, 3.12, and 3.13) succeeded, each running 27 tests and reporting `OK`, including `test_malformed_icao_designator_is_rejected`. Tests used mocked responses and did not query live Wikidata.
 
-**Status:** Phase 3 implementation and CI verification complete. Awaiting user review/approval before Phase 4.
+**Status:** Complete. Implementation and CI verification passed; the user approved Phase 3 before Phase 4 began.
 
 ## Phase 4 — Data quality, normalization, and provenance
 
 **Goal:** Make refreshed records easier to trust and maintain.
 
-Planned deliverables:
-- Normalize whitespace and comparison keys consistently.
-- Deduplicate records using stable source identifiers where available, with cautious fallback rules.
-- Preserve source URLs and source identifiers in each record.
-- Validate expected field types and report skipped/ambiguous records.
-- Add fixtures for duplicates, missing values, and unusual source responses.
+**Implemented:**
+- Normalizes whitespace across known text fields and uppercases ICAO type designators for consistent comparisons.
+- Deduplicates by normalized source identity when available; otherwise uses a conservative fallback only when designator, model, and manufacturer are all present.
+- Merges missing fields from duplicate records without replacing existing non-empty values; preserves source URLs, IDs, retrieval timestamps, and unknown source-specific fields.
+- Validates JSON catalog shape and known field types. Wikidata parsing safely skips malformed bindings, invalid or untrusted entity URLs, missing identifiers, and malformed designators.
+- Reports the count of skipped Wikidata rows through CLI warnings.
+- Adds regression tests for duplicate records, normalization, missing designators, invalid field types, skipped rows, and unusual source response shapes.
+- Documents sourced fields, missing/unknown values, and the fact that the application does not infer or fabricate ICAO codes.
 
-**Acceptance criteria:**
-- Duplicate handling is deterministic and tested.
-- Records without a verified ICAO type designator remain searchable by model/manufacturer without a fabricated code.
-- Documentation explains what is sourced, inferred, or unknown.
+**Verification results (2026-10-26):** GitHub Actions run [#27](https://github.com/MehdiAnti/AircraftCode-Explorer/actions/runs/40342033600) completed successfully on commit 6b934930e09d194d357b2c66c409212e2c39f6bb. All four matrix jobs (Python 3.10, 3.11, 3.12, and 3.13) succeeded. The Python 3.10 log confirms 34 tests ran; the other matrix jobs also succeeded. Tests use mocked source responses; no live Wikidata refresh was run. The local catalog data/aircraft.json remains empty ([]), as requested.
+
+**Status:** Implementation and CI verification complete. Awaiting user review/approval before Phase 5.
 
 ## Phase 5 — Documentation and release readiness
 
@@ -147,4 +148,5 @@ Possible items, prioritized with user approval:
 
 - **Phase 1:** Foundation files committed. Local execution not yet verified.
 - **Phase 2:** Test suite, CI workflow, README roadmap link, and roadmap status update committed. GitHub Actions run #3 passed all 14 tests across Python 3.10–3.13; user approved Phase 3.
-- **Phase 3:** Wikidata refresh, atomic catalog replacement, provenance, CLI options, mocked tests, and documentation committed. Added a dedicated malformed-designator regression test. GitHub Actions run #14 passed all 27 tests on Python 3.10–3.13. User review pending before Phase 4.
+- **Phase 3:** Wikidata refresh, atomic catalog replacement, provenance, CLI options, mocked tests, and documentation committed. Added a dedicated malformed-designator regression test. GitHub Actions run #14 passed all 27 tests on Python 3.10–3.13. User approved Phase 3 before Phase 4.
+- **Phase 4:** Normalization, deterministic deduplication, conservative fallback identity, catalog field validation, safe Wikidata row parsing, skipped-row warnings, regression tests, and provenance documentation committed. GitHub Actions run #27 passed all 34 tests on Python 3.10–3.13. The local catalog remains empty ([]). Awaiting user approval before Phase 5.

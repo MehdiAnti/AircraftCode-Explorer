@@ -105,7 +105,51 @@ class ParseWikidataResponseTests(unittest.TestCase):
         self.assertEqual(parse_wikidata_response(payload, diagnostics=diagnostics), [])
         self.assertEqual(diagnostics, ["Skipped 4 malformed or incomplete Wikidata row(s)."])
 
-    def test_missing_bindings_raises_clear_error(self):
+
+    def test_broad_discovery_accepts_candidate_without_designator(self):
+        payload = {
+            "results": {
+                "bindings": [
+                    {
+                        "item": binding("https://www.wikidata.org/entity/Q123"),
+                        "itemLabel": binding("Example glider"),
+                        "manufacturerLabel": binding("Example Works"),
+                    },
+                    {
+                        "item": binding("https://www.wikidata.org/entity/Q124"),
+                        "itemLabel": binding("Example helicopter"),
+                        "icao": binding("EXH1"),
+                    },
+                ]
+            }
+        }
+        records = parse_wikidata_candidates(
+            payload, retrieved_at="2026-10-26T12:00:00Z"
+        )
+        self.assertEqual(len(records), 2)
+        by_id = {record["source_id"]: record for record in records}
+        self.assertNotIn("icao_type_designator", by_id["Q123"])
+        self.assertEqual(by_id["Q123"]["verification_status"], "discovered")
+        self.assertEqual(by_id["Q123"]["field_evidence"]["model"][0]["source_name"], "Wikidata")
+        self.assertEqual(by_id["Q124"]["icao_type_designator"], "EXH1")
+        self.assertEqual(by_id["Q124"]["verification_status"], "discovered")
+
+    def test_broad_discovery_skips_invalid_designator_but_keeps_aircraft_candidate(self):
+        payload = {
+            "results": {
+                "bindings": [
+                    {
+                        "item": binding("https://www.wikidata.org/entity/Q123"),
+                        "itemLabel": binding("Example aircraft"),
+                        "icao": binding("not a code"),
+                    }
+                ]
+            }
+        }
+        records = parse_wikidata_candidates(payload)
+        self.assertEqual(len(records), 1)
+        self.assertNotIn("icao_type_designator", records[0])
+\n    def test_missing_bindings_raises_clear_error(self):
         with self.assertRaises(WikidataError):
             parse_wikidata_response({})
 

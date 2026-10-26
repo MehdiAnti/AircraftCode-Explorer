@@ -67,7 +67,7 @@ jobs:
           if len(records) != len(payload):
               raise SystemExit("Catalog validation changed the record count.")
 
-          registry_dir = Path("$RUNNER_TEMP/registry")
+          registry_dir = Path(__import__("os").environ["RUNNER_TEMP"]) / "registry"
           shard_files = list(registry_dir.glob("*/*.json.gz"))
           if not shard_files:
               raise SystemExit("No compressed registry search shards were generated.")

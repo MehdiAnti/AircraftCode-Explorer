@@ -276,7 +276,7 @@ def write_opensky_registry_shards(
         "icao_type_designator": "typecode",
         "operator": "operator",
     }
-    field_dirs = {name: destination / name for name in fields}
+    field_dirs = {name: destination / subdirectory for name, subdirectory in fields.items()}
     for directory in field_dirs.values():
         directory.mkdir(parents=True, exist_ok=True)
 

@@ -179,9 +179,9 @@ Further possibilities, subject to explicit user approval: optional desktop or we
 - Keep the existing visual design and use expandable cards to show additional available aircraft fields.
 - Generate compressed JSON registry shards from the OpenSky CSV, partitioned by two-character field prefixes. Load matching shards on demand and cache them in the browser session.
 - Export available registration, ICAO24, manufacturer, model, type code, serial/line number, operator/callsign, owner, registration and flight dates, equipment flags, notes, and source provenance.
-- Generate registry shards into the GitHub Pages artifact rather than committing them to Git history. Continue committing only model-level `data/aircraft.json` on scheduled refresh.
+- Generate the complete compressed aircraft-level JSON registry and search shards into the GitHub Pages artifact rather than committing large registry data to Git history. Continue committing only model-level `data/aircraft.json` on scheduled refresh.
 - Update tests, Actions workflows, README, and web documentation.
 
 **Search behavior:** Registry search requires at least two letters or digits and performs case-insensitive prefix matching with punctuation ignored. The Refresh data button reloads the latest model catalog JSON; it does not trigger Actions.
 
-**Status:** Implementation in PR #11; awaiting review and CI. The live OpenSky download and GitHub Pages deployment must be checked after merge.
+**Status:** PR #11 merged. Follow-up correction adds `aircraft-registry.json.gz` to the scheduled/manual refresh and Pages artifact, validates full registry records as well as search shards, and updates documentation. Verify the follow-up PR and a live refresh/deployment before calling the full flow operational.

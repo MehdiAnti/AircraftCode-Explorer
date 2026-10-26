@@ -216,9 +216,12 @@ def write_opensky_registry_shards(
     temporary_paths: dict[tuple[str, str], Path] = {}
     final_paths: dict[tuple[str, str], Path] = {}
     counts: dict[str, dict[str, int]] = {name: {} for name in fields}
+    registry_export_path = destination / "aircraft-registry.json.gz"
+    registry_temp_path = destination / ".aircraft-registry.json.gz.tmp"
     rows_read = rows_skipped = records_written = 0
     try:
-        with source_path.open("r", encoding="utf-8-sig", newline="") as source:
+        with gzip.open(registry_temp_path, "wt", encoding="utf-8", newline="") as registry_file, source_path.open("r", encoding="utf-8-sig", newline="") as source:
+            registry_file.write("[")
             reader = csv.DictReader(source)
             if not reader.fieldnames:
                 raise OpenSkyImportError("OpenSky metadata CSV is empty or has no header row")
@@ -247,6 +250,9 @@ def write_opensky_registry_shards(
                 record["source_url"] = OPENSKY_SOURCE_URL
                 record["source_retrieved_at"] = timestamp
                 record["verification_status"] = "imported_unverified"
+                if records_written > 1:
+                    registry_file.write(",")
+                json.dump(record, registry_file, ensure_ascii=False, separators=(",", ":"))
                 for field, directory in field_dirs.items():
                     value = record.get(field)
                     if not value:
@@ -267,12 +273,14 @@ def write_opensky_registry_shards(
                         writer.write(",")
                     json.dump(record, writer, ensure_ascii=False, separators=(",", ":"))
                     counts[field][first] += 1
+            registry_file.write("]")
             for writer in writers.values():
                 writer.write("]")
                 writer.close()
             writers.clear()
         for key, temp_path in temporary_paths.items():
             os.replace(temp_path, final_paths[key])
+        os.replace(registry_temp_path, registry_export_path)
         for field, directory in field_dirs.items():
             valid_names = {path.name for key, path in final_paths.items() if key[0] == field}
             for old_path in directory.glob("*.json.gz"):
@@ -283,6 +291,7 @@ def write_opensky_registry_shards(
             writer.close()
         for path in temporary_paths.values():
             path.unlink(missing_ok=True)
+        registry_temp_path.unlink(missing_ok=True)
         if isinstance(exc, UnicodeDecodeError):
             raise OpenSkyImportError("OpenSky metadata CSV must be UTF-8 encoded") from exc
         raise OpenSkyImportError(f"Could not parse metadata CSV: {exc}") from exc
@@ -291,12 +300,14 @@ def write_opensky_registry_shards(
             writer.close()
         for path in temporary_paths.values():
             path.unlink(missing_ok=True)
+        registry_temp_path.unlink(missing_ok=True)
         raise
 
     return {
         "rows_read": rows_read,
         "rows_skipped": rows_skipped,
         "registry_records": records_written,
+        "registry_export": str(registry_export_path),
         "shards": {field: dict(sorted(values.items())) for field, values in counts.items()},
         "source_retrieved_at": timestamp,
     }

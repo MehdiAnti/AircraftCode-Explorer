@@ -41,14 +41,14 @@ jobs:
             --output "$RUNNER_TEMP/aircraftDatabase.csv"
           test -s "$RUNNER_TEMP/aircraftDatabase.csv"
 
-      - name: Import CSV into catalog and registry shards
+      - name: Import CSV into catalog, full registry export, and search shards
         run: |
           python -m aircraft_explorer import-opensky \
             --metadata "$RUNNER_TEMP/aircraftDatabase.csv" \
             --output data/aircraft.json \
             --registry-dir "$RUNNER_TEMP/registry"
 
-      - name: Validate generated catalog and registry shards
+      - name: Validate generated catalog, full registry export, and search shards
         run: |
           python - <<'PY'
           import gzip
@@ -68,6 +68,20 @@ jobs:
               raise SystemExit("Catalog validation changed the record count.")
 
           registry_dir = Path(__import__("os").environ["RUNNER_TEMP"]) / "registry"
+          full_registry_path = registry_dir / "aircraft-registry.json.gz"
+          if not full_registry_path.is_file() or full_registry_path.stat().st_size == 0:
+              raise SystemExit("Full compressed aircraft registry export is missing or empty.")
+          with gzip.open(full_registry_path, "rt", encoding="utf-8") as file:
+              full_registry = json.load(file)
+          if not isinstance(full_registry, list) or not full_registry:
+              raise SystemExit("Full aircraft registry must be a non-empty JSON array.")
+          if any(not isinstance(record, dict) for record in full_registry):
+              raise SystemExit("Full aircraft registry contains a non-object record.")
+          required_fields = ("icao24", "registration", "icao_type_designator", "operator")
+          if any(not all(field in record for field in required_fields) for record in full_registry):
+              raise SystemExit("Full aircraft registry records must include ICAO24, registration, type-code, and operator fields.")
+          if not any(any(record.get(field) for field in required_fields) for record in full_registry):
+              raise SystemExit("Full aircraft registry contains no ICAO24, registration, type-code, or operator values.")
           shard_files = list(registry_dir.glob("*/*.json.gz"))
           if not shard_files:
               raise SystemExit("No compressed registry search shards were generated.")
@@ -78,7 +92,7 @@ jobs:
               if not isinstance(shard_data, list) or any(not isinstance(item, dict) for item in shard_data):
                   raise SystemExit(f"Invalid registry shard: {shard}")
               shard_records += len(shard_data)
-          print(f"Validated {len(records):,} catalog records and {len(shard_files):,} registry shards ({shard_records:,} indexed entries).")
+          print(f"Validated {len(records):,} model catalog records, {len(full_registry):,} individual-aircraft registry records, and {len(shard_files):,} search shards ({shard_records:,} indexed entries).")
           PY
 
       - name: Commit model catalog JSON when changed
@@ -101,7 +115,9 @@ jobs:
           mkdir -p _site/data
           cp index.html styles.css app.js _site/
           cp data/aircraft.json _site/data/aircraft.json
-          cp -R "$RUNNER_TEMP/registry" _site/data/registry
+          cp "$RUNNER_TEMP/registry/aircraft-registry.json.gz" _site/data/aircraft-registry.json.gz
+          mkdir -p _site/data/registry
+          cp -R "$RUNNER_TEMP/registry/icao24" "$RUNNER_TEMP/registry/registration" "$RUNNER_TEMP/registry/typecode" "$RUNNER_TEMP/registry/operator" _site/data/registry
 
       - name: Upload website artifact
         uses: actions/upload-pages-artifact@v3

@@ -29,6 +29,20 @@ ORDER BY ?icao
 LIMIT 5000
 """
 
+# Discovery intentionally includes aircraft entities without an ICAO designator.
+# Results remain candidates until independently verified; this is not a catalog query.
+DISCOVERY_QUERY = """
+SELECT DISTINCT ?item ?itemLabel ?itemDescription ?manufacturer ?manufacturerLabel ?icao
+WHERE {
+  ?item wdt:P31/wdt:P279* wd:Q11436.
+  OPTIONAL { ?item wdt:P239 ?icao. }
+  OPTIONAL { ?item wdt:P176 ?manufacturer. }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+}
+ORDER BY ?item
+LIMIT 5000
+"""
+
 
 class WikidataError(RuntimeError):
     """Raised when Wikidata cannot provide a valid aircraft catalog."""
@@ -44,6 +58,7 @@ def _binding_value(binding: dict[str, Any], key: str) -> str | None:
 
 def _request_json(
     *,
+    query: str = SPARQL_QUERY,
     timeout: float = DEFAULT_TIMEOUT,
     retries: int = DEFAULT_RETRIES,
     retry_delay: float = 0.5,
@@ -56,7 +71,7 @@ def _request_json(
     if retries < 0:
         raise ValueError("retries cannot be negative")
 
-    params = urlencode({"query": SPARQL_QUERY, "format": "json"})
+    params = urlencode({"query": query, "format": "json"})
     request = Request(
         f"{ENDPOINT}?{params}",
         headers={
@@ -195,3 +210,130 @@ def fetch_wikidata_aircraft(
         sleep=sleep,
     )
     return parse_wikidata_response(payload, diagnostics=diagnostics)
+
+
+
+def parse_wikidata_candidates(
+    payload: dict[str, Any],
+    *,
+    retrieved_at: str | None = None,
+    diagnostics: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Parse broad aircraft discovery results as unverified candidates.
+
+    These records must not be promoted into the main catalog until each
+    populated factual field has independent, field-level evidence.
+    """
+    try:
+        bindings = payload["results"]["bindings"]
+    except (KeyError, TypeError) as exc:
+        raise WikidataError("Wikidata response is missing results.bindings") from exc
+    if not isinstance(bindings, list):
+        raise WikidataError("Wikidata results.bindings must be a list")
+
+    timestamp = retrieved_at or datetime.now(timezone.utc).isoformat()
+    records: list[dict[str, Any]] = []
+    skipped = 0
+    for binding in bindings:
+        if not isinstance(binding, dict):
+            skipped += 1
+            continue
+        item_uri = _binding_value(binding, "item")
+        if not item_uri:
+            skipped += 1
+            continue
+        try:
+            parsed_uri = urlsplit(item_uri)
+        except ValueError:
+            skipped += 1
+            continue
+        source_id = parsed_uri.path.rstrip("/").rsplit("/", 1)[-1]
+        if (
+            parsed_uri.scheme not in {"http", "https"}
+            or parsed_uri.hostname not in {"wikidata.org", "www.wikidata.org"}
+            or not parsed_uri.path.startswith("/entity/")
+            or not source_id.startswith("Q")
+            or not source_id[1:].isdigit()
+        ):
+            skipped += 1
+            continue
+
+        model = _binding_value(binding, "itemLabel")
+        manufacturer = _binding_value(binding, "manufacturerLabel")
+        description = _binding_value(binding, "itemDescription")
+        designator = _binding_value(binding, "icao")
+        if designator and not re.fullmatch(r"[A-Za-z0-9]{2,4}", designator.strip()):
+            designator = None
+
+        record: dict[str, Any] = {
+            "source": "Wikidata",
+            "source_id": source_id,
+            "source_url": f"https://www.wikidata.org/wiki/{source_id}",
+            "source_retrieved_at": timestamp,
+            "verification_status": "discovered",
+            "field_evidence": {},
+        }
+        if model:
+            record["model"] = model.strip()
+            record["field_evidence"]["model"] = [{
+                "source_name": "Wikidata",
+                "source_url": record["source_url"],
+                "retrieved_at": timestamp,
+            }]
+        if manufacturer:
+            record["manufacturer"] = manufacturer.strip()
+            record["field_evidence"]["manufacturer"] = [{
+                "source_name": "Wikidata",
+                "source_url": record["source_url"],
+                "retrieved_at": timestamp,
+            }]
+        if description:
+            record["description"] = description.strip()
+            record["field_evidence"]["description"] = [{
+                "source_name": "Wikidata",
+                "source_url": record["source_url"],
+                "retrieved_at": timestamp,
+            }]
+        if designator:
+            record["icao_type_designator"] = designator.strip().upper()
+            record["field_evidence"]["icao_type_designator"] = [{
+                "source_name": "Wikidata",
+                "source_url": record["source_url"],
+                "retrieved_at": timestamp,
+            }]
+        class_label = _binding_value(binding, "classLabel")
+        if class_label:
+            record["candidate_kind"] = class_label.strip()
+        records.append(normalize_record(record))
+
+    if diagnostics is not None and skipped:
+        diagnostics.append(f"Skipped {skipped} malformed Wikidata candidate row(s).")
+    return sorted(
+        deduplicate_records(records),
+        key=lambda item: (
+            (item.get("manufacturer") or "").casefold(),
+            (item.get("model") or "").casefold(),
+            item.get("source_id") or "",
+        ),
+    )
+
+
+def fetch_wikidata_candidates(
+    *,
+    timeout: float = DEFAULT_TIMEOUT,
+    retries: int = DEFAULT_RETRIES,
+    retry_delay: float = 0.5,
+    opener: Callable[..., Any] | None = None,
+    sleep: Callable[[float], None] = time.sleep,
+    diagnostics: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Discover broad aircraft candidates without replacing the trusted catalog."""
+    payload = _request_json(
+        query=DISCOVERY_QUERY,
+        timeout=timeout,
+        retries=retries,
+        retry_delay=retry_delay,
+        opener=opener,
+        sleep=sleep,
+    )
+    return parse_wikidata_candidates(payload, diagnostics=diagnostics)

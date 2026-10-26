@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
@@ -117,6 +118,8 @@ def parse_wikidata_response(
             continue
 
         designator = _binding_value(binding, "icao")
+        if not designator or not re.fullmatch(r"[A-Za-z0-9]{2,4}", designator.strip()):
+            continue
         model = _binding_value(binding, "itemLabel")
         manufacturer = _binding_value(binding, "manufacturerLabel")
         description = _binding_value(binding, "itemDescription")
@@ -127,8 +130,7 @@ def parse_wikidata_response(
             "source_url": f"https://www.wikidata.org/wiki/{source_id}",
             "source_retrieved_at": timestamp,
         }
-        if designator:
-            record["icao_type_designator"] = designator.strip()
+        record["icao_type_designator"] = designator.strip().upper()
         if model:
             record["model"] = model.strip()
         if manufacturer:

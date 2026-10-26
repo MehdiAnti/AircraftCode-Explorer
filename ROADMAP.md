@@ -29,7 +29,7 @@ Build a maintainable aircraft catalog and explorer that supports searching by IC
 | 4 | Data quality, normalization, and provenance | Complete — verified and approved by user |
 | 5 | Documentation and release readiness | Complete — PR #1 merged; CI status should be checked separately |
 | 6.1–6.2 | CSV export, search, and sorting | Complete — PR #2 merged |
-| 6.3 | Catalog status and freshness | In progress — dedicated review branch |
+| 6.3 | Catalog status and freshness | Complete — PR #3 merged |\n| 7 | Broad aircraft discovery, field-level verification, and safe promotion | In progress — dedicated branch and review PR |
 
 ## Phase 1 — Repository foundation and local catalog CLI
 
@@ -130,3 +130,16 @@ Further possibilities, subject to explicit user approval: optional desktop or we
 - **Phase 5:** Documentation and release-readiness guidance merged in PR #1. No license has been selected and no release tag has been created.
 - **Phase 6.1–6.2:** CSV export and selectable search sorting merged in PR #2. No aircraft data was added or changed.
 - **Phase 6.3:** Catalog status and freshness reporting is implemented on a dedicated branch and awaiting CI/review. No aircraft data is being added or changed.
+
+
+## Phase 7 — Broad aircraft data ingestion
+
+**Goal:** Discover aircraft entities with and without ICAO designators, retain provenance, and prevent unverified candidates from silently entering the main catalog.
+
+**Implemented on the Phase 7 branch:** a separate broad Wikidata discovery query; candidate records with explicit `discovered` status and field-level Wikidata provenance; validation that requires independent non-Wikidata evidence for every populated factual field; a promotion command that writes to a separate output by default; mocked tests; and documentation.
+
+**Important limitations:** Wikidata discovery can include aircraft entities that need manual classification. The promotion command validates evidence metadata, not the truth of a cited page. Reviewers must verify that each cited source supports the associated field. No live refresh has been run as part of the code change, and no unverified records are added to `data/aircraft.json`.
+
+**Acceptance criteria:** candidates with and without designators can be discovered; unverified or Wikidata-only fields cannot be promoted; independently evidenced aircraft without designators are permitted; candidate discovery never overwrites the trusted catalog; failed or empty discovery does not overwrite existing output.
+
+**Status:** Implementation submitted for review in a dedicated Phase 7 pull request. The checked-in aircraft catalog remains unchanged until candidate evidence has been verified.

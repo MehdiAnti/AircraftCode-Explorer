@@ -17,7 +17,8 @@ from .core import (
     search_aircraft,
 )
 from .csv_export import write_csv
-from .wikidata import WikidataError, fetch_wikidata_aircraft
+from .ingestion import verified_records
+from .wikidata import WikidataError, fetch_wikidata_aircraft, fetch_wikidata_candidates
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -67,6 +68,31 @@ def build_parser() -> argparse.ArgumentParser:
         help="Output CSV path; use '-' or omit to write to standard output.",
     )
 
+    discover_parser = subparsers.add_parser(
+        "discover", help="Discover broad Wikidata aircraft candidates without changing the catalog."
+    )
+    discover_parser.add_argument(
+        "--output", default="data/candidates.json",
+        help="Candidate JSON path (default: data/candidates.json)."
+    )
+    discover_parser.add_argument(
+        "--timeout", type=float, default=20.0, help="Request timeout in seconds."
+    )
+    discover_parser.add_argument(
+        "--retries", type=int, default=3, help="Retries after transient errors (0-5)."
+    )
+
+    promote_parser = subparsers.add_parser(
+        "promote", help="Write only independently verified candidates to a catalog."
+    )
+    promote_parser.add_argument(
+        "--input", default="data/candidates.json", help="Candidate JSON path."
+    )
+    promote_parser.add_argument(
+        "--output", default="data/verified-aircraft.json",
+        help="Output catalog path; defaults to a separate file, not data/aircraft.json."
+    )
+
     update_parser = subparsers.add_parser(
         "update",
         help="Fetch candidate aircraft records from Wikidata and replace the local catalog.",
@@ -89,6 +115,61 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     data_path = args.data or DEFAULT_DATA_PATH
+
+    if args.command == "discover":
+        if args.timeout <= 0:
+            parser.error("--timeout must be greater than zero")
+        if not 0 <= args.retries <= 5:
+            parser.error("--retries must be between 0 and 5")
+        try:
+            diagnostics: list[str] = []
+            records = fetch_wikidata_candidates(
+                timeout=args.timeout, retries=args.retries, diagnostics=diagnostics
+            )
+            if not records:
+                raise WikidataError(
+                    "Wikidata returned zero usable candidates; no output file was written."
+                )
+            output_path = Path(args.output)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(
+                json.dumps(records, indent=2, ensure_ascii=False) + "\\n",
+                encoding="utf-8",
+            )
+        except (OSError, ValueError, WikidataError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        for message in diagnostics:
+            print(f"warning: {message}", file=sys.stderr)
+        print(f"Discovered {len(records)} candidate record(s); catalog unchanged.")
+        return 0
+
+    if args.command == "promote":
+        try:
+            candidate_path = Path(args.input)
+            with candidate_path.open("r", encoding="utf-8") as file:
+                payload = json.load(file)
+            if not isinstance(payload, list) or any(not isinstance(item, dict) for item in payload):
+                raise ValueError("Candidate file must contain a JSON list of objects")
+            accepted, rejected = verified_records(payload)
+            if not accepted:
+                print(
+                    f"No verified records to promote; {len(rejected)} candidate(s) rejected. "
+                    "Output was not changed.",
+                    file=sys.stderr,
+                )
+                return 2
+            save_aircraft(accepted, args.output)
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        print(f"Promoted {len(accepted)} verified record(s); rejected {len(rejected)} candidate(s).")
+        if rejected:
+            for item in rejected[:10]:
+                print(f"  {item.get('source_id') or 'unknown'}: {'; '.join(item['issues'])}", file=sys.stderr)
+            if len(rejected) > 10:
+                print(f"  ... and {len(rejected) - 10} more rejected candidate(s).", file=sys.stderr)
+        return 0
 
     if args.command == "update":
         if args.timeout <= 0:

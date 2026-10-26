@@ -1,6 +1,6 @@
 # AircraftCode-Explorer
 
-AircraftCode-Explorer is a small Python command-line tool for searching a local aircraft catalog by ICAO type designator, model, manufacturer, or description. It can also explicitly refresh the catalog with candidate records from Wikidata.
+AircraftCode-Explorer is a small Python command-line tool for searching a local aircraft catalog by ICAO type designator, model, manufacturer, or description. It can discover broad aircraft candidates from Wikidata, track field-level verification evidence, and promote only independently supported records into a separate catalog.
 
 > **Data caution:** Wikidata is community-maintained and is not an authoritative ICAO register. This tool does not independently verify designators or infer missing codes. Verify data against an authoritative source before operational use.
 
@@ -118,6 +118,27 @@ python -m aircraft_explorer status
 python -m aircraft_explorer status --json
 ```
 
+### `discover`
+
+Discovers broad aircraft candidates, including entities with and without an ICAO designator, and writes them to a separate candidate JSON file. It does not modify `data/aircraft.json`.
+
+```bash
+python -m aircraft_explorer discover
+python -m aircraft_explorer discover --output /tmp/aircraft-candidates.json
+```
+
+Discovery results are explicitly marked `verification_status: "discovered"`. Wikidata evidence records where a value was found, but is not independent verification. The query may include aircraft entities that still require classification; review candidates before promotion.
+
+### `promote`
+
+Validates candidate evidence and writes only records marked `verified` to an output catalog. Every populated model, manufacturer, description, or ICAO designator must have field-level evidence from a source other than Wikidata, with an HTTPS URL and retrieval timestamp. Missing ICAO designators are allowed when the other populated fields are supported.
+
+```bash
+python -m aircraft_explorer promote --input data/candidates.json --output data/verified-aircraft.json
+```
+
+Promotion defaults to `data/verified-aircraft.json`, not the main catalog. It refuses to write if no records pass validation. The current tool validates evidence metadata and does not independently crawl or authenticate the cited source; reviewers must check that each source actually supports its field.
+
 ### `update`
 
 Refreshes the local catalog explicitly from Wikidata. Ordinary `search` and `stats` commands never access the network.
@@ -146,7 +167,7 @@ The catalog file is `data/aircraft.json` by default and contains a JSON list of 
 - `source`: source name
 - `source_id`: stable identifier assigned by the source
 - `source_url`: URL for the source entity
-- `source_retrieved_at`: UTC retrieval timestamp
+- `source_retrieved_at`: UTC retrieval timestamp\n- `verification_status`: discovery/verification state (for example, `discovered` or `verified`)\n- `field_evidence`: mapping of factual fields to source name, HTTPS URL, and retrieval timestamp; Wikidata-only evidence is not sufficient for promotion
 
 An illustrative schema-only record is shown below. Its placeholder values are not real aircraft data and should not be copied into the catalog as a factual record:
 
@@ -167,7 +188,7 @@ An illustrative schema-only record is shown below. Its placeholder values are no
 
 The loader normalizes whitespace in known text fields and uppercases designators. It validates the top-level list, record objects, and known field types. Records with the same source identity are deduplicated; a conservative fallback is used only when designator, model, and manufacturer are all present. Missing values remain unknown. Unknown source-specific fields are preserved.
 
-The initial Wikidata query only returns items that have the Wikidata ICAO type designator property, so aircraft without that property will not be returned by refresh. Model, manufacturer, and description values are source labels, not independently verified facts. The application does not infer or fabricate ICAO codes.
+The legacy `update` command only returns items that have the Wikidata ICAO type designator property. The separate `discover` command also searches aircraft entities without that property and writes candidates separately. Model, manufacturer, and description values are source labels, not independently verified facts. The application does not infer or fabricate ICAO codes.
 
 ## Development and tests
 

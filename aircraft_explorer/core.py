@@ -19,6 +19,8 @@ STRING_FIELDS = (
     "source_id",
     "source_url",
     "source_retrieved_at",
+    "verification_status",
+    "candidate_kind",
 )
 SORT_FIELDS = {
     "manufacturer": "manufacturer",

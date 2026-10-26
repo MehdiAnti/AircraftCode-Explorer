@@ -64,7 +64,7 @@ class UpdateCommandTests(unittest.TestCase):
         fetch.return_value = [SAMPLE_RECORD]
         code = main(["--data", str(self.path), "update", "--timeout", "7", "--retries", "2"])
         self.assertEqual(code, 0)
-        fetch.assert_called_once_with(timeout=7.0, retries=2)
+        fetch.assert_called_once_with(timeout=7.0, retries=2, diagnostics=[])
 
 
 if __name__ == "__main__":

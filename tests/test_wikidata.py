@@ -149,7 +149,8 @@ class ParseWikidataResponseTests(unittest.TestCase):
         records = parse_wikidata_candidates(payload)
         self.assertEqual(len(records), 1)
         self.assertNotIn("icao_type_designator", records[0])
-\n    def test_missing_bindings_raises_clear_error(self):
+
+    def test_missing_bindings_raises_clear_error(self):
         with self.assertRaises(WikidataError):
             parse_wikidata_response({})
 

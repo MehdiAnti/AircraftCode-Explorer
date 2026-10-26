@@ -72,10 +72,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     cross_check_parser = subparsers.add_parser(
         "cross-check",
-        help="Compare candidate records against a locally supplied aircraft metadata CSV.",
+        help="Compare catalog records against a locally supplied aircraft metadata CSV.",
     )
     cross_check_parser.add_argument(
-        "--input", default="data/candidates.json", help="Candidate JSON path."
+        "--input", default=None, help="Catalog JSON path (defaults to the selected catalog)."
     )
     cross_check_parser.add_argument(
         "--metadata", required=True,

@@ -48,7 +48,7 @@ class VerificationTests(unittest.TestCase):
             "icao_type_designator": "EXMP",
             "field_evidence": {
                 "model": [self.evidence()],
-                "icao_type_designator": [self.evidence("Wikidata", "https://www.wikidata.org/wiki/Q123")],
+                "icao_type_designator": [self.evidence("OpenSky Aircraft Metadata", "https://opensky-network.org/data/aircraft")],
             },
         }
         self.assertTrue(any("icao_type_designator needs independent" in issue for issue in verification_issues(record)))

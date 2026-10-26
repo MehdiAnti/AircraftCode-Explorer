@@ -41,12 +41,12 @@ jobs:
             --output "$RUNNER_TEMP/aircraftDatabase.csv"
           test -s "$RUNNER_TEMP/aircraftDatabase.csv"
 
-      - name: Import CSV into JSON catalog
+      - name: Import CSV into catalog and registry shards
         run: |
           python -m aircraft_explorer import-opensky \
             --metadata "$RUNNER_TEMP/aircraftDatabase.csv" \
             --output data/aircraft.json \
-            --registry-dir data/registry
+            --registry-dir "$RUNNER_TEMP/registry"
 
       - name: Validate generated catalog and registry shards
         run: |
@@ -66,7 +66,9 @@ jobs:
           records = load_aircraft(path)
           if len(records) != len(payload):
               raise SystemExit("Catalog validation changed the record count.")
-          shard_files = list(Path("data/registry").glob("*/*.json.gz"))
+
+          registry_dir = Path("$RUNNER_TEMP/registry")
+          shard_files = list(registry_dir.glob("*/*.json.gz"))
           if not shard_files:
               raise SystemExit("No compressed registry search shards were generated.")
           shard_records = 0
@@ -79,22 +81,43 @@ jobs:
           print(f"Validated {len(records):,} catalog records and {len(shard_files):,} registry shards ({shard_records:,} indexed entries).")
           PY
 
-      - name: Commit generated JSON when changed
+      - name: Commit model catalog JSON when changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/aircraft.json data/registry/
+          git add data/aircraft.json
           if git diff --cached --quiet; then
-            echo "Generated JSON files are unchanged; no commit is needed."
+            echo "Model catalog JSON is unchanged; no commit is needed."
           else
             git commit -m "data: refresh OpenSky aircraft catalog"
             git push origin HEAD:main
           fi
 
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Prepare website artifact
+        run: |
+          mkdir -p _site/data
+          cp index.html styles.css app.js _site/
+          cp data/aircraft.json _site/data/aircraft.json
+          cp -R "$RUNNER_TEMP/registry" _site/data/registry
+
+      - name: Upload website artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
   deploy-pages:
     needs: refresh
-    uses: ./.github/workflows/pages.yml
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
     permissions:
-      contents: read
       pages: write
       id-token: write
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

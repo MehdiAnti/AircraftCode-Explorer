@@ -30,7 +30,7 @@ Build a maintainable aircraft catalog and explorer that supports searching by IC
 | 5 | Documentation and release readiness | Complete — PR #1 merged; CI status should be checked separately |
 | 6.1–6.2 | CSV export, search, and sorting | Complete — PR #2 merged |
 | 6.3 | Catalog status and freshness | Complete — PR #3 merged |
-| 7 | Broad aircraft discovery, field-level verification, and safe promotion | In progress — discovery classification improvements in review |
+| 7 | Broad aircraft discovery, field-level verification, and safe promotion | Complete — PR #4 merged; classification refinements merged in PR #5 |\n| 8 | Local metadata cross-check and conflict reporting | Implemented in review PR; no API, automatic download, or catalog mutation |
 
 ## Phase 1 — Repository foundation and local catalog CLI
 
@@ -145,3 +145,16 @@ Further possibilities, subject to explicit user approval: optional desktop or we
 **Acceptance criteria:** candidates with and without designators can be discovered; unverified or Wikidata-only fields cannot be promoted; independently evidenced aircraft without designators are permitted; candidate discovery never overwrites the trusted catalog; failed or empty discovery does not overwrite existing output.
 
 **Status:** Phase 7 implementation was merged in PR [#4](https://github.com/MehdiAnti/AircraftCode-Explorer/pull/4). Discovery classification refinements are in a separate review PR. The checked-in aircraft catalog remains unchanged until candidate evidence has been verified.
+
+
+## Phase 8 — Local aircraft metadata cross-check
+
+**Goal:** Add a dependency-free, API-free way to compare discovered candidates with a metadata CSV obtained separately, while preserving the existing verification gate.
+
+**Implemented in the phase branch:** a `cross-check` CLI command, flexible CSV header handling for model/type-code fields, conservative normalized comparisons, explicit conflict and multiple-match statuses, a JSON report with source filename and check time, and mocked/local-file tests.
+
+**Boundaries:** no automatic download, no API credentials, no dataset bundled in the repository, no change to `data/aircraft.json`, and no automatic promotion or addition to `field_evidence`. A local file's download date is not inferred. OpenSky metadata may be stale and has licensing/reuse limitations; the user must obtain and use a dataset only as permitted and manually inspect results.
+
+**Acceptance criteria:** malformed CSV and candidate input fail safely; code/model matches are reported separately; disagreements and duplicate matches are visible; empty/no-match data is not treated as verification; report output is separate from the trusted catalog.
+
+**Status:** Implementation is on `phase-8-local-metadata-cross-check`; review and CI pending.

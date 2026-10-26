@@ -18,6 +18,7 @@ from .core import (
 )
 from .csv_export import write_csv
 from .ingestion import verified_records
+from .metadata import MetadataError, cross_check_candidates, load_metadata_csv, write_cross_check_report
 from .wikidata import WikidataError, fetch_wikidata_aircraft, fetch_wikidata_candidates
 
 
@@ -80,6 +81,22 @@ def build_parser() -> argparse.ArgumentParser:
     )
     discover_parser.add_argument(
         "--retries", type=int, default=3, help="Retries after transient errors (0-5)."
+    )
+
+    cross_check_parser = subparsers.add_parser(
+        "cross-check",
+        help="Compare candidate records against a locally supplied aircraft metadata CSV.",
+    )
+    cross_check_parser.add_argument(
+        "--input", default="data/candidates.json", help="Candidate JSON path."
+    )
+    cross_check_parser.add_argument(
+        "--metadata", required=True,
+        help="Path to a locally obtained aircraft metadata CSV; no download is performed.",
+    )
+    cross_check_parser.add_argument(
+        "--output", default="data/metadata-cross-check.json",
+        help="Report JSON path (default: data/metadata-cross-check.json).",
     )
 
     promote_parser = subparsers.add_parser(
@@ -155,6 +172,32 @@ def main(argv: Sequence[str] | None = None) -> int:
             f"{model_candidates} model candidate(s), "
             f"{individual_aircraft} individual aircraft, "
             f"{ambiguous} ambiguous; catalog unchanged."
+        )
+        return 0
+
+    if args.command == "cross-check":
+        try:
+            candidate_path = Path(args.input)
+            with candidate_path.open("r", encoding="utf-8") as file:
+                payload = json.load(file)
+            if not isinstance(payload, list) or any(not isinstance(item, dict) for item in payload):
+                raise ValueError("Candidate file must contain a JSON list of objects")
+            metadata_records = load_metadata_csv(args.metadata)
+            report = cross_check_candidates(
+                payload,
+                metadata_records,
+                metadata_source=Path(args.metadata).name,
+            )
+            write_cross_check_report(report, args.output)
+        except (OSError, ValueError, json.JSONDecodeError, MetadataError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        counts = report["summary"]["statuses"]
+        print(
+            f"Cross-checked {report['summary']['candidates']} candidate(s) against "
+            f"{report['summary']['metadata_rows']} metadata row(s): "
+            + ", ".join(f"{status}={count}" for status, count in sorted(counts.items()))
+            + f". Report: {args.output}. No catalog changes made."
         )
         return 0
 

@@ -28,8 +28,8 @@ def _valid_timestamp(value: Any) -> bool:
 def verification_issues(record: dict[str, Any]) -> list[str]:
     """Return reasons a candidate is not safe to promote into the main catalog.
 
-    Every populated factual field must have at least one non-Wikidata evidence
-    entry with a valid HTTPS URL and retrieval timestamp. A missing ICAO code is
+    Every populated factual field must have independent source evidence
+    with a valid HTTPS URL and retrieval timestamp. A missing ICAO code is
     allowed; an unverified non-empty code is not.
     """
     issues: list[str] = []
@@ -69,7 +69,8 @@ def verification_issues(record: dict[str, Any]) -> list[str]:
             if (
                 isinstance(source_name, str)
                 and source_name.strip()
-                and source_name.strip().casefold() != "wikidata"
+                and source_name.strip().casefold() != "opensky aircraft metadata"
+                and source_name.strip().casefold() != str(record.get("source") or "").strip().casefold()
                 and isinstance(source_url, str)
                 and source_url.startswith("https://")
                 and _valid_timestamp(retrieved_at)
@@ -78,7 +79,7 @@ def verification_issues(record: dict[str, Any]) -> list[str]:
                 break
         if not verified:
             issues.append(
-                f"{field} needs independent non-Wikidata evidence with an HTTPS URL and retrieval timestamp"
+                f"{field} needs independent evidence from a source other than the record's import source, with an HTTPS URL and retrieval timestamp"
             )
     return issues
 
@@ -97,3 +98,31 @@ def verified_records(records: Iterable[dict[str, Any]]) -> tuple[list[dict[str, 
         record["verification_status"] = "verified"
         accepted.append(record)
     return accepted, rejected
+
+
+def verify_record(record: dict[str, Any], *, source_name: str, source_url: str, retrieved_at: str) -> dict[str, Any]:
+    """Mark a record verified only after explicit manual source review."""
+    verified = dict(record)
+    evidence_entry = {
+        "source_name": source_name.strip(),
+        "source_url": source_url.strip(),
+        "retrieved_at": retrieved_at.strip(),
+    }
+    verified["verification_status"] = "verified"
+    current_evidence = verified.get("field_evidence")
+    evidence = {
+        field: list(entries) if isinstance(entries, list) else []
+        for field, entries in current_evidence.items()
+    } if isinstance(current_evidence, dict) else {}
+    for field in FACTUAL_FIELDS:
+        value = verified.get(field)
+        if value is None or (isinstance(value, str) and not value.strip()):
+            continue
+        entries = evidence.setdefault(field, [])
+        if evidence_entry not in entries:
+            entries.append(dict(evidence_entry))
+    verified["field_evidence"] = evidence
+    issues = verification_issues(verified)
+    if issues:
+        raise ValueError("Record cannot be marked verified: " + "; ".join(issues))
+    return verified

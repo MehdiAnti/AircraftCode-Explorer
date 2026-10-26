@@ -226,12 +226,12 @@ _GENERIC_DESCRIPTIONS = {
 _INDIVIDUAL_DESCRIPTION = re.compile(
     r"\b(serial (?:number )?of|registration of|tail number of|individual aircraft|"
     r"aircraft that (?:collided|crashed|was|were|is|has)|aircraft involved in|"
-    r"aircraft destroyed in|aircraft lost in)\\b",
+    r"aircraft destroyed in|aircraft lost in)\b",
     re.IGNORECASE,
 )
 _IDENTIFIER_LABEL = re.compile(
-    r"^(?:\\d{4,}(?:[-/][A-Z0-9]+)?|[A-Z0-9]{2,4}[-/][A-Z0-9]{2,8}|"
-    r"N\\d{1,5}[A-Z]{0,2})$",
+    r"^(?:\d{4,}(?:[-/][A-Z0-9]+)?|[A-Z0-9]{2,4}[-/][A-Z0-9]{2,8}|"
+    r"N\d{1,5}[A-Z]{0,2})$",
     re.IGNORECASE,
 )
 

@@ -61,6 +61,12 @@ class ParseWikidataResponseTests(unittest.TestCase):
         self.assertEqual(record["manufacturer"], "Cessna")
         self.assertEqual(record["description"], "single-engine aircraft")
 
+    def test_skipped_rows_are_reported(self):
+        diagnostics = []
+        records = parse_wikidata_response(response_payload(), diagnostics=diagnostics)
+        self.assertEqual(len(records), 1)
+        self.assertEqual(diagnostics, ["Skipped 1 malformed or incomplete Wikidata row(s)."])
+
     def test_malformed_icao_designator_is_rejected(self):
         payload = {
             "results": {
@@ -74,7 +80,9 @@ class ParseWikidataResponseTests(unittest.TestCase):
             }
         }
 
-        self.assertEqual(parse_wikidata_response(payload), [])
+        diagnostics = []
+        self.assertEqual(parse_wikidata_response(payload, diagnostics=diagnostics), [])
+        self.assertEqual(diagnostics, ["Skipped 1 malformed or incomplete Wikidata row(s)."])
 
     def test_missing_bindings_raises_clear_error(self):
         with self.assertRaises(WikidataError):

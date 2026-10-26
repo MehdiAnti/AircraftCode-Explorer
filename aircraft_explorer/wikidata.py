@@ -11,6 +11,8 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 from typing import Any, Callable
 
+from .core import deduplicate_records, normalize_record
+
 ENDPOINT = "https://query.wikidata.org/sparql"
 USER_AGENT = "AircraftCode-Explorer/0.1 (https://github.com/MehdiAnti/AircraftCode-Explorer)"
 DEFAULT_TIMEOUT = 20.0
@@ -93,6 +95,7 @@ def parse_wikidata_response(
     payload: dict[str, Any],
     *,
     retrieved_at: str | None = None,
+    diagnostics: list[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Convert SPARQL JSON bindings into catalog records with provenance."""
     try:
@@ -104,21 +107,26 @@ def parse_wikidata_response(
         raise WikidataError("Wikidata results.bindings must be a list")
 
     timestamp = retrieved_at or datetime.now(timezone.utc).isoformat()
-    records: dict[str, dict[str, Any]] = {}
+    records: list[dict[str, Any]] = []
+    skipped = 0
 
     for binding in bindings:
         if not isinstance(binding, dict):
+            skipped += 1
             continue
 
         item_uri = _binding_value(binding, "item")
         if not item_uri:
+            skipped += 1
             continue
         source_id = item_uri.rstrip("/").rsplit("/", 1)[-1]
         if not source_id.startswith("Q") or not source_id[1:].isdigit():
+            skipped += 1
             continue
 
         designator = _binding_value(binding, "icao")
         if not designator or not re.fullmatch(r"[A-Za-z0-9]{2,4}", designator.strip()):
+            skipped += 1
             continue
         model = _binding_value(binding, "itemLabel")
         manufacturer = _binding_value(binding, "manufacturerLabel")
@@ -130,7 +138,7 @@ def parse_wikidata_response(
             "source_url": f"https://www.wikidata.org/wiki/{source_id}",
             "source_retrieved_at": timestamp,
         }
-        record["icao_type_designator"] = designator.strip().upper()
+        record["icao_type_designator"] = designator
         if model:
             record["model"] = model.strip()
         if manufacturer:
@@ -138,16 +146,15 @@ def parse_wikidata_response(
         if description:
             record["description"] = description.strip()
 
-        previous = records.get(source_id)
-        if previous is None:
-            records[source_id] = record
-        else:
-            for key, value in record.items():
-                if key not in previous or not previous[key]:
-                    previous[key] = value
+        records.append(normalize_record(record))
+
+    if diagnostics is not None and skipped:
+        diagnostics.append(
+            f"Skipped {skipped} malformed or incomplete Wikidata row(s)."
+        )
 
     return sorted(
-        records.values(),
+        deduplicate_records(records),
         key=lambda item: (
             (item.get("icao_type_designator") or "").casefold(),
             (item.get("manufacturer") or "").casefold(),

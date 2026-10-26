@@ -73,7 +73,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             parser.error("--retries must be between 0 and 5")
 
         try:
-            records = fetch_wikidata_aircraft(timeout=args.timeout, retries=args.retries)
+            diagnostics: list[str] = []
+            records = fetch_wikidata_aircraft(
+                timeout=args.timeout,
+                retries=args.retries,
+                diagnostics=diagnostics,
+            )
             if not records and not args.allow_empty:
                 raise WikidataError(
                     "Wikidata returned zero usable records; the existing catalog was not changed. "
@@ -84,6 +89,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"error: {exc}", file=sys.stderr)
             return 2
 
+        for message in diagnostics:
+            print(f"warning: {message}", file=sys.stderr)
         print(f"Updated catalog with {len(records)} record(s).")
         return 0
 

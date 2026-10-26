@@ -10,6 +10,7 @@ from aircraft_explorer.wikidata import (
     _request_json,
     parse_wikidata_response,
     parse_wikidata_candidates,
+    classify_aircraft_candidate,
 )
 
 
@@ -150,6 +151,38 @@ class ParseWikidataResponseTests(unittest.TestCase):
         records = parse_wikidata_candidates(payload)
         self.assertEqual(len(records), 1)
         self.assertNotIn("icao_type_designator", records[0])
+
+    def test_discovery_classifies_individual_aircraft_as_not_a_model(self):
+        classification, reasons = classify_aircraft_candidate(
+            "158761",
+            "serial of U.S. Marine Corps RH-53D Sea Stallion that collided with another aircraft",
+        )
+        self.assertEqual(classification, "individual_aircraft")
+        self.assertTrue(reasons)
+
+    def test_discovery_flags_generic_description_for_review(self):
+        classification, reasons = classify_aircraft_candidate(
+            "3B-SGT",
+            "aircraft",
+        )
+        self.assertEqual(classification, "ambiguous")
+        self.assertTrue(reasons)
+
+    def test_discovery_retains_plausible_model_candidate_without_icao(self):
+        classification, reasons = classify_aircraft_candidate(
+            "Example Glider 200",
+            "single-seat sailplane designed for recreational soaring",
+        )
+        self.assertEqual(classification, "model_candidate")
+        self.assertTrue(reasons)
+
+    def test_discovery_uses_class_label_to_identify_model_candidate(self):
+        classification, _ = classify_aircraft_candidate(
+            "Example Model",
+            "aircraft",
+            "aircraft model",
+        )
+        self.assertEqual(classification, "model_candidate")
 
     def test_missing_bindings_raises_clear_error(self):
         with self.assertRaises(WikidataError):

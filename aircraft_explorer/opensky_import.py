@@ -271,6 +271,7 @@ def write_opensky_registry_shards(
     destination = Path(output_dir)
     timestamp = retrieved_at or datetime.now(timezone.utc).isoformat()
     fields = {
+        "icao24": "icao24",
         "registration": "registration",
         "icao_type_designator": "typecode",
         "operator": "operator",

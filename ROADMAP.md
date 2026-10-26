@@ -158,4 +158,22 @@ Further possibilities, subject to explicit user approval: optional desktop or we
 
 **Setup note:** Repository Settings → Pages must use GitHub Actions. Check the repository plan and site visibility before enabling Pages, because a Pages site may be publicly accessible even when the source repository is private.
 
-**Verification:** Pending pull request review and GitHub Actions runs. No live OpenSky download or deployment is claimed before the workflow is run.
+**Status:** Merged in PR #9. Initial live Pages deployment and scheduled refresh should be confirmed in GitHub Actions; no successful live OpenSky run is assumed from the merge alone.
+
+
+## Phase 12 — Search performance and individual-aircraft registry
+
+**Goal:** Keep the existing website design while making large-catalog search responsive and adding useful individual-aircraft lookup.
+
+**Scope:**
+- Precompute searchable text and sort order once; debounce model-catalog input.
+- Add separate search modes for the model catalog, registration, ICAO type code, and operator.
+- Generate compressed JSON registry shards from the OpenSky CSV using the existing Python importer. Shards are partitioned by two-character field prefixes and contain available aircraft-level details such as ICAO24, registration, manufacturer, model, type code, serial/line number, operator/callsign, owner, dates, equipment flags, notes, and source provenance.
+- Load registry shards on demand, cache loaded shards in the browser session, and keep the existing compact result cards. Clicking a card expands its details.
+- Keep individual aircraft records separate from grouped model records in `data/aircraft.json`.
+- Generate registry shards as part of the Pages artifact rather than committing them to Git history, preventing large binary registry updates from accumulating every week.
+- Update tests, README, WEB.md, and workflow documentation.
+
+**Search behavior:** Registry search accepts at least two letters or digits and matches prefixes, ignoring case and punctuation. The browser fetches only the matching field-specific shard. The Refresh data button continues to reload the latest model catalog JSON; it does not trigger Actions.
+
+**Status:** Implementation in PR #10; awaiting review and CI. The live OpenSky download and GitHub Pages deployment still need to be checked after merge.

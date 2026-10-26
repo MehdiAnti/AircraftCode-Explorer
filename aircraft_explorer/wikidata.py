@@ -170,6 +170,7 @@ def fetch_wikidata_aircraft(
     retry_delay: float = 0.5,
     opener: Callable[..., Any] | None = None,
     sleep: Callable[[float], None] = time.sleep,
+    diagnostics: list[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Fetch candidate aircraft records that have a Wikidata ICAO designator."""
     payload = _request_json(
@@ -179,4 +180,4 @@ def fetch_wikidata_aircraft(
         opener=opener,
         sleep=sleep,
     )
-    return parse_wikidata_response(payload)
+    return parse_wikidata_response(payload, diagnostics=diagnostics)

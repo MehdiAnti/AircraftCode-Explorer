@@ -104,7 +104,34 @@ jobs:
             echo "Model catalog JSON is unchanged; no commit is needed."
           else
             git commit -m "data: refresh OpenSky aircraft catalog"
-            git push origin HEAD:main
+            for attempt in 1 2 3 4; do
+              if git push origin HEAD:main; then
+                echo "Model catalog commit pushed successfully."
+                break
+              fi
+
+              echo "Push attempt $attempt failed; checking remote state."
+              git fetch origin main
+
+              if git merge-base --is-ancestor HEAD origin/main; then
+                echo "The commit is already present on origin/main."
+                break
+              fi
+
+              local_parent="$(git rev-parse HEAD^)"
+              remote_head="$(git rev-parse origin/main)"
+              if [ "$remote_head" != "$local_parent" ]; then
+                echo "origin/main changed independently; refusing to overwrite it."
+                exit 1
+              fi
+
+              if [ "$attempt" -eq 4 ]; then
+                echo "Push failed after 4 attempts."
+                exit 1
+              fi
+
+              sleep "$((attempt * 10))"
+            done
           fi
 
       - name: Configure GitHub Pages
@@ -116,6 +143,9 @@ jobs:
           cp index.html styles.css app.js _site/
           cp data/aircraft.json _site/data/aircraft.json
           cp "$RUNNER_TEMP/registry/aircraft-registry.json.gz" _site/data/aircraft-registry.json.gz
+          gzip --decompress --stdout "$RUNNER_TEMP/registry/aircraft-registry.json.gz" > _site/data/aircraft-registry.json
+          test -s _site/data/aircraft-registry.json
+          python -m json.tool _site/data/aircraft-registry.json > /dev/null
           mkdir -p _site/data/registry
           cp -R "$RUNNER_TEMP/registry/icao24" "$RUNNER_TEMP/registry/registration" "$RUNNER_TEMP/registry/typecode" "$RUNNER_TEMP/registry/operator" _site/data/registry
 

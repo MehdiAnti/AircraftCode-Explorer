@@ -305,7 +305,7 @@ async function loadCatalog() {
     buildSearchIndex(aircraft);
     loadedAt = new Date();
     loadError = null;
-    filterCatalog();
+    filter();
   } catch (error) {
     loadError = error instanceof Error ? error.message : "Unknown catalog error";
     statusMessage = aircraft.length ? "Refresh failed; showing the last loaded catalog. " + loadError : "Unable to load aircraft data. " + loadError + " Try Refresh data again.";

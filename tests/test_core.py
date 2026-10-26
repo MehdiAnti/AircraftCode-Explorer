@@ -5,10 +5,60 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from aircraft_explorer.core import catalog_stats, load_aircraft, search_aircraft
+from aircraft_explorer.core import (
+    catalog_stats,
+    deduplicate_records,
+    load_aircraft,
+    normalize_record,
+    save_aircraft,
+    search_aircraft,
+)
 
 
 class LoadAircraftTests(unittest.TestCase):
+    def test_normalizes_fields_and_preserves_unknown_fields(self):
+        record = normalize_record({
+            "icao_type_designator": "  c172  ",
+            "model": " Cessna   172 ",
+            "description": "   ",
+            "custom_source_field": {"id": 12},
+        })
+        self.assertEqual(record["icao_type_designator"], "C172")
+        self.assertEqual(record["model"], "Cessna 172")
+        self.assertIsNone(record["description"])
+        self.assertEqual(record["custom_source_field"], {"id": 12})
+
+    def test_deduplicates_by_source_id_and_merges_missing_values(self):
+        records = deduplicate_records([
+            {"source": "Wikidata", "source_id": " Q123 ", "model": "Cessna 172"},
+            {"source": "wikidata", "source_id": "q123", "manufacturer": "Cessna"},
+        ])
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["source_id"], "Q123")
+        self.assertEqual(records[0]["model"], "Cessna 172")
+        self.assertEqual(records[0]["manufacturer"], "Cessna")
+
+    def test_fallback_deduplication_requires_complete_identity_fields(self):
+        records = deduplicate_records([
+            {"icao_type_designator": " c172 ", "model": " 172 Skyhawk ", "manufacturer": "Cessna"},
+            {"icao_type_designator": "C172", "model": "172 Skyhawk", "manufacturer": " Cessna "},
+            {"model": "Cherokee", "manufacturer": "Piper"},
+            {"model": "Cherokee", "manufacturer": "Piper"},
+        ])
+        self.assertEqual(len(records), 3)
+
+    def test_save_normalizes_and_deduplicates(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "aircraft.json"
+            save_aircraft([
+                {"icao_type_designator": " c172 ", "model": "Cessna 172", "manufacturer": "Cessna"},
+                {"icao_type_designator": "C172", "model": " Cessna   172 ", "manufacturer": " Cessna "},
+            ], path)
+            saved = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(len(saved), 1)
+            self.assertEqual(saved[0]["icao_type_designator"], "C172")
+
+
     def test_loads_json_list(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "aircraft.json"
@@ -88,6 +138,11 @@ class SearchAircraftTests(unittest.TestCase):
             model="da",
         )
         self.assertEqual([item["manufacturer"] for item in results], ["Diamond Aircraft"])
+
+    def test_records_without_designators_remain_searchable(self):
+        results = search_aircraft(self.aircraft, manufacturer="diamond", model="da")
+        self.assertEqual(len(results), 1)
+        self.assertIsNone(results[0].get("icao_type_designator"))
 
     def test_no_matches_returns_empty_list(self):
         self.assertEqual(search_aircraft(self.aircraft, "not present"), [])

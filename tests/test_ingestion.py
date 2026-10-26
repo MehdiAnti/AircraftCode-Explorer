@@ -1,4 +1,4 @@
-"""Tests for aircraft verification and safe promotion."""
+"""Tests for independent aircraft record verification."""
 
 import unittest
 
@@ -13,20 +13,20 @@ class VerificationTests(unittest.TestCase):
             "retrieved_at": "2026-10-26T12:00:00Z",
         }
 
-    def test_wikidata_only_evidence_is_not_enough(self):
+    def test_opensky_only_evidence_is_not_enough(self):
         record = {
             "verification_status": "verified",
             "model": "Example model",
             "field_evidence": {
-                "model": [self.evidence("Wikidata", "https://www.wikidata.org/wiki/Q123")]
+                "model": [self.evidence("OpenSky Aircraft Metadata", "https://opensky-network.org/data/aircraft")]
             },
         }
-        self.assertTrue(any("independent non-Wikidata" in issue for issue in verification_issues(record)))
+        self.assertTrue(any("independent evidence" in issue for issue in verification_issues(record)))
 
     def test_missing_designator_is_allowed_when_other_fields_are_verified(self):
         record = {
-            "source": "Wikidata",
-            "source_id": "Q123",
+            "source": "OpenSky Aircraft Metadata",
+            "source_id": None,
             "verification_status": "verified",
             "model": "Example model",
             "manufacturer": "Example maker",
@@ -41,14 +41,14 @@ class VerificationTests(unittest.TestCase):
         self.assertEqual(rejected, [])
         self.assertNotIn("icao_type_designator", accepted[0])
 
-    def test_unverified_designator_blocks_promotion(self):
+    def test_unverified_designator_blocks_verification(self):
         record = {
             "verification_status": "verified",
             "model": "Example model",
             "icao_type_designator": "EXMP",
             "field_evidence": {
                 "model": [self.evidence()],
-                "icao_type_designator": [self.evidence("Wikidata", "https://www.wikidata.org/wiki/Q123")],
+                "icao_type_designator": [self.evidence("OpenSky Aircraft Metadata", "https://opensky-network.org/data/aircraft")],
             },
         }
         self.assertTrue(any("icao_type_designator needs independent" in issue for issue in verification_issues(record)))
@@ -66,32 +66,6 @@ class VerificationTests(unittest.TestCase):
             },
         }
         self.assertTrue(verification_issues(record))
-
-    def test_individual_aircraft_candidate_cannot_be_promoted(self):
-        record = {
-            "verification_status": "verified",
-            "candidate_classification": "individual_aircraft",
-            "model": "158761",
-            "field_evidence": {"model": [self.evidence()]},
-        }
-        self.assertTrue(
-            any("candidate classification" in issue for issue in verification_issues(record))
-        )
-
-    def test_ambiguous_candidate_cannot_be_promoted(self):
-        record = {
-            "verification_status": "verified",
-            "candidate_classification": "ambiguous",
-            "model": "3B-SGT",
-            "description": "aircraft",
-            "field_evidence": {
-                "model": [self.evidence()],
-                "description": [self.evidence()],
-            },
-        }
-        self.assertTrue(
-            any("candidate classification" in issue for issue in verification_issues(record))
-        )
 
     def test_rejects_missing_verification_status(self):
         accepted, rejected = verified_records([{"model": "Example model"}])

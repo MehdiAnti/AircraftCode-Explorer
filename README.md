@@ -1,8 +1,8 @@
 # AircraftCode-Explorer
 
-AircraftCode-Explorer is a small Python command-line tool for searching a local aircraft catalog by ICAO type designator, model, manufacturer, or description. It can discover broad aircraft candidates from Wikidata, track field-level verification evidence, and promote only independently supported records into a separate catalog.
+AircraftCode-Explorer is a small Python command-line tool for searching a local aircraft catalog by ICAO type designator, model, manufacturer, or description. It can import local aircraft metadata, track provenance, report conflicts, and record manual verification based on independent source evidence.
 
-> **Data caution:** Wikidata is community-maintained and is not an authoritative ICAO register. This tool does not independently verify designators or infer missing codes. Verify data against an authoritative source before operational use.
+Imported source data is not automatically verified. Review records against independent sources before relying on them operationally.
 
 ## Requirements
 
@@ -61,7 +61,6 @@ For example:
 ```bash
 python -m aircraft_explorer --data /tmp/aircraft.json stats
 python -m aircraft_explorer --data /tmp/aircraft.json search C172
-python -m aircraft_explorer --data /tmp/aircraft.json update
 ```
 
 ### `search`
@@ -93,6 +92,28 @@ python -m aircraft_explorer export --output aircraft.csv
 
 The export uses only the local catalog and makes no network requests. Known fields appear first in a stable order; any additional fields present in records are included as extra columns. Missing values are represented by empty cells, and nested extra-field values are encoded as JSON text. An empty catalog still produces a CSV header.
 
+### `review`
+
+Summarizes verification states and reports type codes associated with different model/manufacturer identities.
+
+```bash
+python -m aircraft_explorer review
+python -m aircraft_explorer review --json
+python -m aircraft_explorer review --output catalog-review.json
+```
+
+A conflict is a review flag, not proof that a record is wrong. Resolve conflicts against independent evidence before verifying a record.
+
+### `verify`
+
+After manually checking an independent source, attach its evidence to one catalog record and mark it verified.
+
+```bash
+python -m aircraft_explorer verify --model "Cessna 172 Skyhawk" --icao C172 --source-name "FAA Aircraft Registry" --source-url "https://www.faa.gov/aircraft" --retrieved-at "2026-10-27T12:00:00Z" --confirm
+```
+
+The `--confirm` flag confirms that you checked the source supports every populated factual field. The command requires an HTTPS URL and timestamp, rejects the same source used for the import, and refuses records with conflicting ICAO codes unless `--confirm-conflict` is supplied after manual conflict review. It records the evidence you provide; it cannot independently authenticate the cited page.
+
 ### `stats`
 
 Shows the number of records, records with a designator, and distinct non-empty manufacturers.
@@ -118,20 +139,9 @@ python -m aircraft_explorer status
 python -m aircraft_explorer status --json
 ```
 
-### `discover`
-
-Discovers broad aircraft candidates, including entities with and without an ICAO designator, and writes them to a separate candidate JSON file. It does not modify `data/aircraft.json`.
-
-```bash
-python -m aircraft_explorer discover
-python -m aircraft_explorer discover --output /tmp/aircraft-candidates.json
-```
-
-Discovery results are explicitly marked `verification_status: "discovered"` and classified as `model_candidate`, `individual_aircraft`, or `ambiguous`. Classification uses Wikidata class labels, descriptions, and identifier-shaped labels to flag likely serial numbers and registrations, and generic descriptions such as "aircraft" remain ambiguous. These are conservative heuristics, not proof of identity: review uncertain records against independent sources. All classes remain in `data/candidates.json` with classification reasons, while promotion blocks records classified as individual aircraft or ambiguous. The trusted `data/aircraft.json` catalog is not changed by discovery.
-
 ### `import-opensky`
 
-Import a locally obtained OpenSky aircraft metadata CSV directly into the selected catalog, without Wikidata discovery or the `promote` verification gate.
+Import a locally obtained OpenSky aircraft metadata CSV directly into the selected catalog, without a network request or a separate candidate workflow.
 
 ```bash
 python -m aircraft_explorer import-opensky --metadata /path/to/aircraft.csv --dry-run
@@ -142,50 +152,21 @@ python -m aircraft_explorer import-opensky --metadata /path/to/aircraft.csv
 - `--dry-run` reports proposed counts without writing.
 - Aircraft-level rows are grouped into unique manufacturer/model/type-code records; individual registrations are not copied.
 - Exact matches retain existing fields and gain a `source_records` provenance entry. Conflicting records remain separate for review; no ICAO code is inferred.
-- Imported records are marked `imported_unverified`; this does not make them eligible for `promote`.
+- Imported records are marked `imported_unverified`; this does not make them verified.
 - The command reads a local CSV only and never downloads it.
 
 **Data-use caution:** confirm that the particular file and your intended use/redistribution are permitted before committing imported data to this public repository. This project does not bundle the CSV or automatically download it.
 
 ### `cross-check`
 
-Compares the discovery candidate JSON against an aircraft metadata CSV that you obtained separately. It makes no network requests, requires no API key, and does not modify the trusted catalog or the input files.
+Compares the selected local catalog against a metadata CSV you obtained separately. It makes no network requests and does not modify the catalog.
 
 ```bash
 python -m aircraft_explorer cross-check --metadata /path/to/aircraft-metadata.csv
-python -m aircraft_explorer cross-check --input data/candidates.json --metadata /path/to/aircraft-metadata.csv --output /tmp/cross-check.json
+python -m aircraft_explorer cross-check --input data/aircraft.json --metadata /path/to/aircraft-metadata.csv --output /tmp/cross-check.json
 ```
 
-The report marks candidates as `corroborated`, `model_match_code_unknown`, `code_match_model_unconfirmed`, `conflict`, `multiple_matches`, or `no_match`. Matching is conservative: normalized model labels and ICAO type designators are compared when available; registration/serial identifiers are not treated as aircraft model names. The report retains matching rows and the conflicting fields for manual review.
-
-**Important:** a cross-check result is not a verified record and does not add evidence to `field_evidence` or enable promotion. OpenSky's aircraft metadata is described by OpenSky as unlicensed, potentially stale, and provided without guarantees. Check the dataset's current terms and permitted use before obtaining or using it. Do not commit or redistribute the dataset; provide a local CSV path yourself. The report records the CSV filename, not a dataset retrieval timestamp, because the tool cannot infer when the file was downloaded.
-
-### `promote`
-
-Validates candidate evidence and writes only records marked `verified` to an output catalog. Every populated model, manufacturer, description, or ICAO designator must have field-level evidence from a source other than Wikidata, with an HTTPS URL and retrieval timestamp. Missing ICAO designators are allowed when the other populated fields are supported.
-
-```bash
-python -m aircraft_explorer promote --input data/candidates.json --output data/verified-aircraft.json
-```
-
-Promotion defaults to `data/verified-aircraft.json`, not the main catalog. It refuses to write if no records pass validation. The current tool validates evidence metadata and does not independently crawl or authenticate the cited source; reviewers must check that each source actually supports its field.
-
-### `update`
-
-Refreshes the local catalog explicitly from Wikidata. Ordinary `search` and `stats` commands never access the network.
-
-```bash
-python -m aircraft_explorer update
-python -m aircraft_explorer update --timeout 30 --retries 2
-```
-
-- `--timeout SECONDS`: request timeout; defaults to 20 seconds and must be greater than zero.
-- `--retries COUNT`: retry attempts for transient failures; defaults to 3 and accepts values from 0 through 5.
-- `--allow-empty`: permit an empty result to replace the current catalog. Use this only when that replacement is intentional.
-
-The updater queries Wikidata's SPARQL endpoint for items with the ICAO aircraft type designator property. Requests use a descriptive User-Agent, a timeout, and bounded exponential backoff for network errors and HTTP 429/5xx responses. Malformed or incomplete rows are skipped and summarized in a warning. A successful result is written through a temporary file and atomically replaces the target catalog. By default, a response with zero usable records is refused, leaving the existing catalog untouched.
-
-**Back up any hand-maintained catalog before running `update`:** a successful update replaces the target file with the fetched result; it does not merge it with the previous catalog.
+The report highlights corroborating matches, conflicts, multiple matches, and no-match records. A match is not verification evidence; inspect the source manually.
 
 ## Data format and provenance
 
@@ -199,10 +180,8 @@ The catalog file is `data/aircraft.json` by default and contains a JSON list of 
 - `source_id`: stable identifier assigned by the source
 - `source_url`: URL for the source entity
 - `source_retrieved_at`: UTC retrieval timestamp
-- `verification_status`: discovery/verification state (for example, `discovered` or `verified`)
-- `field_evidence`: mapping of factual fields to source name, HTTPS URL, and retrieval timestamp; Wikidata-only evidence is not sufficient for promotion
-- `candidate_classification`: discovery triage result (`model_candidate`, `individual_aircraft`, or `ambiguous`)
-- `classification_reasons`: reasons for the discovery classification
+- `verification_status`: review state (for example, `imported_unverified` or `verified`)
+- `field_evidence`: mapping of each populated factual field to an independent source name, HTTPS URL, and retrieval timestamp
 
 An illustrative schema-only record is shown below. Its placeholder values are not real aircraft data and should not be copied into the catalog as a factual record:
 
@@ -223,7 +202,7 @@ An illustrative schema-only record is shown below. Its placeholder values are no
 
 The loader normalizes whitespace in known text fields and uppercases designators. It validates the top-level list, record objects, and known field types. Records with the same source identity are deduplicated; a conservative fallback is used only when designator, model, and manufacturer are all present. Missing values remain unknown. Unknown source-specific fields are preserved.
 
-The legacy `update` command only returns items that have the Wikidata ICAO type designator property. The separate `discover` command also searches aircraft entities without that property and writes candidates separately. Model, manufacturer, and description values are source labels, not independently verified facts. The application does not infer or fabricate ICAO codes.
+The application does not infer or fabricate ICAO codes. Source labels and imported metadata are not independently verified facts.
 
 ## Development and tests
 
@@ -233,7 +212,7 @@ Run the standard-library test suite from the repository root:
 python -m unittest discover -s tests -v
 ```
 
-The tests use mocked Wikidata responses and do not need live network access. GitHub Actions runs the suite on Python 3.10, 3.11, 3.12, and 3.13 for pushes to `main` and pull requests.
+The tests use mocked independent source responses and do not need live network access. GitHub Actions runs the suite on Python 3.10, 3.11, 3.12, and 3.13 for pushes to `main` and pull requests.
 
 Before submitting a change, run the test command above and review the output. See [ROADMAP.md](ROADMAP.md) for phase status and [RELEASE.md](RELEASE.md) for versioning and release guidance.
 
@@ -242,9 +221,6 @@ Before submitting a change, run the test command above and review the output. Se
 - **`No matching aircraft found.`** The local catalog may be empty, or no record matches the supplied text and filters. Check `python -m aircraft_explorer stats` and the selected `--data` path.
 - **`Aircraft catalog must contain a JSON list`** The catalog's top level must be a JSON array (`[]` or a list of record objects).
 - **A record field must be a string or null.** One of the known fields contains a number, boolean, array, or object. Correct the JSON value and try again.
-- **`Wikidata returned zero usable records`** The updater intentionally protects the existing catalog. Check connectivity and the upstream response first. Only pass `--allow-empty` if replacing the catalog with an empty list is intended.
-- **Network or HTTP errors during update.** The updater retries transient failures a limited number of times. Retry later if the endpoint is unavailable; the existing catalog is not replaced when fetching or parsing fails.
-- **An update replaced local records.** The update command refreshes the target catalog rather than merging it. Restore a backup if needed, or use a separate file with `--data PATH` when testing a refresh.
 
 ## License status
 

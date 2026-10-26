@@ -32,8 +32,8 @@ class LoadAircraftTests(unittest.TestCase):
 
     def test_deduplicates_by_source_id_and_merges_missing_values(self):
         records = deduplicate_records([
-            {"source": "Wikidata", "source_id": " Q123 ", "model": "Cessna 172"},
-            {"source": "wikidata", "source_id": "q123", "manufacturer": "Cessna"},
+            {"source": "OpenSky Aircraft Metadata", "source_id": " Q123 ", "model": "Cessna 172"},
+            {"source": "opensky aircraft metadata", "source_id": "q123", "manufacturer": "Cessna"},
         ])
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0]["source_id"], "Q123")
@@ -184,12 +184,12 @@ class CatalogStatusTests(unittest.TestCase):
             {
                 "icao_type_designator": "C172",
                 "manufacturer": "Cessna",
-                "source": "Wikidata",
+                "source": "OpenSky Aircraft Metadata",
                 "source_retrieved_at": "2026-10-25T12:00:00Z",
             },
             {
                 "manufacturer": "Cessna",
-                "source": "wikidata",
+                "source": "opensky aircraft metadata",
                 "source_retrieved_at": "2026-10-26T00:00:00+00:00",
             },
             {"model": "Unknown source and timestamp"},
@@ -203,7 +203,7 @@ class CatalogStatusTests(unittest.TestCase):
         self.assertEqual(status["with_icao_type_designator"], 1)
         self.assertEqual(status["missing_icao_type_designator"], 3)
         self.assertEqual(status["manufacturers"], 1)
-        self.assertEqual(status["sources"], {"Other": 1, "Unknown": 1, "Wikidata": 2})
+        self.assertEqual(status["sources"], {"Other": 1, "Unknown": 1, "OpenSky Aircraft Metadata": 2})
         self.assertEqual(status["with_retrieval_timestamp"], 2)
         self.assertEqual(status["missing_retrieval_timestamp"], 1)
         self.assertEqual(status["invalid_retrieval_timestamp"], 1)

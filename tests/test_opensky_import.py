@@ -63,6 +63,15 @@ class OpenSkyImportTests(unittest.TestCase):
         self.assertEqual(merged[0]["source_records"][0]["source"], "OpenSky Aircraft Metadata")
         self.assertEqual(summary, {"added": 1, "enriched": 1})
 
+    def test_repeated_import_does_not_duplicate_record_or_provenance(self):
+        existing = [{"model": "Cessna 172", "manufacturer": "Cessna", "icao_type_designator": "C172", "source": "OpenSky Aircraft Metadata", "source_url": OPENSKY_SOURCE_URL, "source_retrieved_at": "2026-10-26T12:00:00Z", "verification_status": "imported_unverified"}]
+        imported = [{"model": "Cessna 172", "manufacturer": "Cessna", "icao_type_designator": "C172", "source": "OpenSky Aircraft Metadata", "source_url": OPENSKY_SOURCE_URL, "source_retrieved_at": "2026-10-27T12:00:00Z", "verification_status": "imported_unverified"}]
+        merged, summary = merge_opensky_records(existing, imported)
+        self.assertEqual(len(merged), 1)
+        self.assertEqual(merged[0]["source_retrieved_at"], "2026-10-27T12:00:00Z")
+        self.assertNotIn("source_records", merged[0])
+        self.assertEqual(summary, {"added": 0, "enriched": 1})
+
     def test_conflicting_record_is_not_overwritten(self):
         existing = [{"model":"Cessna Model A","manufacturer":"Cessna","icao_type_designator":"C172"}]
         imported = [{"model":"Piper Model B","manufacturer":"Piper","icao_type_designator":"C172"}]

@@ -1,4 +1,4 @@
-"""Local CSV cross-checking for aircraft discovery candidates.
+"""Local CSV cross-checking for aircraft catalog records.
 
 This module never downloads third-party datasets and never treats a CSV match as
 independent verification. It produces a review report only.
@@ -179,7 +179,7 @@ def cross_check_candidates(
         "checked_at": checked_timestamp,
         "note": (
             "Comparison only: results are not verification evidence and do not "
-            "authorize promotion. Review the source and dataset terms manually."
+            "change verification status. Review the source and dataset terms manually."
         ),
         "summary": {
             "candidates": len(results),

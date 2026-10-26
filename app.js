@@ -190,7 +190,7 @@ function render() {
   } else {
     el.count.textContent = registrySearching ? "Searching registry…" : number(results.length) + " matching aircraft";
   }
-  showMessage(statusMessage || (results.length ? "" : "No matches found. Try a different search or search mode."));
+  showMessage(registrySearching ? "Searching the aircraft registry…" : statusMessage || (results.length ? "" : "No matches found. Try a different search or search mode."));
   updatePagination();
 }
 function filterCatalog() {
@@ -242,7 +242,7 @@ async function filterRegistry() {
     render();
     return;
   }
-  const firstCharacter = query[0];
+  const firstCharacter = query.slice(0, 2);
   registrySearching = true;
   render();
   try {

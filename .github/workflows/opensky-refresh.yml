@@ -78,6 +78,8 @@ jobs:
           if any(not isinstance(record, dict) for record in full_registry):
               raise SystemExit("Full aircraft registry contains a non-object record.")
           required_fields = ("icao24", "registration", "icao_type_designator", "operator")
+          if any(not all(field in record for field in required_fields) for record in full_registry):
+              raise SystemExit("Full aircraft registry records must include ICAO24, registration, type-code, and operator fields.")
           if not any(any(record.get(field) for field in required_fields) for record in full_registry):
               raise SystemExit("Full aircraft registry contains no ICAO24, registration, type-code, or operator values.")
           shard_files = list(registry_dir.glob("*/*.json.gz"))

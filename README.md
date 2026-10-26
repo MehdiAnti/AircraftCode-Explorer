@@ -2,9 +2,13 @@
 
 A small Python command-line tool for exploring aircraft by ICAO type designator, model, and manufacturer.
 
+## Project status and roadmap
+
+The project is developed in reviewable phases. See [ROADMAP.md](ROADMAP.md) for the full plan, current phase statuses, acceptance criteria, working rules, and completion log. Each phase is reviewed with the user before the next phase begins.
+
 ## Status
 
-The project is being built in phases. The initial implementation uses a local JSON catalog; data refresh from Wikidata will be added in a later phase. Wikidata is a community-maintained source, so its records are not a guarantee of official or complete ICAO data.
+The initial implementation uses a local JSON catalog. Data refresh from Wikidata is planned for a later phase. Wikidata is community-maintained and is not a guarantee of complete or authoritative ICAO data.
 
 ## Requirements
 

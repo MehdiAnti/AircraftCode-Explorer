@@ -41,12 +41,15 @@ jobs:
             --output "$RUNNER_TEMP/aircraftDatabase.csv"
           test -s "$RUNNER_TEMP/aircraftDatabase.csv"
 
-      - name: Import CSV into catalog, full registry export, and search shards
+      - name: Rebuild tracked catalog, full compressed registry, and search shards
         run: |
+          rm -rf data/registry
+          mkdir -p data/registry
           python -m aircraft_explorer import-opensky \
             --metadata "$RUNNER_TEMP/aircraftDatabase.csv" \
             --output data/aircraft.json \
-            --registry-dir "$RUNNER_TEMP/registry"
+            --registry-dir data/registry
+          mv data/registry/aircraft-registry.json.gz data/airframes.json.gz
 
       - name: Validate generated catalog, full registry export, and search shards
         run: |
@@ -67,8 +70,8 @@ jobs:
           if len(records) != len(payload):
               raise SystemExit("Catalog validation changed the record count.")
 
-          registry_dir = Path(__import__("os").environ["RUNNER_TEMP"]) / "registry"
-          full_registry_path = registry_dir / "aircraft-registry.json.gz"
+          registry_dir = Path("data/registry")
+          full_registry_path = Path("data/airframes.json.gz")
           if not full_registry_path.is_file() or full_registry_path.stat().st_size == 0:
               raise SystemExit("Full compressed aircraft registry export is missing or empty.")
           with gzip.open(full_registry_path, "rt", encoding="utf-8") as file:
@@ -82,9 +85,14 @@ jobs:
               raise SystemExit("Full aircraft registry records must include ICAO24, registration, type-code, and operator fields.")
           if not any(any(record.get(field) for field in required_fields) for record in full_registry):
               raise SystemExit("Full aircraft registry contains no ICAO24, registration, type-code, or operator values.")
+          if full_registry_path.stat().st_size >= 90 * 1024 * 1024:
+              raise SystemExit("Compressed registry is at least 90 MiB; refusing to commit a file that could approach GitHub's 100 MB per-file limit.")
           shard_files = list(registry_dir.glob("*/*.json.gz"))
           if not shard_files:
               raise SystemExit("No compressed registry search shards were generated.")
+          for category in ("icao24", "registration", "typecode", "operator"):
+              if not any((registry_dir / category).glob("*.json.gz")):
+                  raise SystemExit(f"No search shards were generated for {category}.")
           shard_records = 0
           for shard in shard_files:
               with gzip.open(shard, "rt", encoding="utf-8") as file:
@@ -95,18 +103,18 @@ jobs:
           print(f"Validated {len(records):,} model catalog records, {len(full_registry):,} individual-aircraft registry records, and {len(shard_files):,} search shards ({shard_records:,} indexed entries).")
           PY
 
-      - name: Commit model catalog JSON when changed
+      - name: Commit refreshed catalog and registry files when changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/aircraft.json
+          git add -A -- data/aircraft.json data/airframes.json.gz data/registry/
           if git diff --cached --quiet; then
-            echo "Model catalog JSON is unchanged; no commit is needed."
+            echo "Catalog and registry files are unchanged; no commit is needed."
           else
-            git commit -m "data: refresh OpenSky aircraft catalog"
+            git commit -m "data: refresh OpenSky catalog and aircraft registry"
             for attempt in 1 2 3 4; do
               if git push origin HEAD:main; then
-                echo "Model catalog commit pushed successfully."
+                echo "Catalog and registry files pushed successfully."
                 break
               fi
 
@@ -142,8 +150,8 @@ jobs:
           mkdir -p _site/data
           cp index.html styles.css app.js _site/
           cp data/aircraft.json _site/data/aircraft.json
-          cp "$RUNNER_TEMP/registry/aircraft-registry.json.gz" _site/data/airframes.json.gz
-          gzip --decompress --stdout "$RUNNER_TEMP/registry/aircraft-registry.json.gz" > _site/data/airframes.json
+          cp data/airframes.json.gz _site/data/airframes.json.gz
+          gzip --decompress --stdout data/airframes.json.gz > _site/data/airframes.json
           test -s _site/data/airframes.json
           python -m json.tool _site/data/airframes.json > /dev/null
           python - <<'PY'
@@ -165,7 +173,7 @@ jobs:
           print(f"Validated published data: {len(models):,} models and {len(airframes):,} individual aircraft.")
           PY
           mkdir -p _site/data/registry
-          cp -R "$RUNNER_TEMP/registry/icao24" "$RUNNER_TEMP/registry/registration" "$RUNNER_TEMP/registry/typecode" "$RUNNER_TEMP/registry/operator" _site/data/registry
+          cp -R data/registry/icao24 data/registry/registration data/registry/typecode data/registry/operator _site/data/registry/
 
       - name: Upload website artifact
         uses: actions/upload-pages-artifact@v3

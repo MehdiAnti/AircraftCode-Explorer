@@ -90,6 +90,9 @@ jobs:
           shard_files = list(registry_dir.glob("*/*.json.gz"))
           if not shard_files:
               raise SystemExit("No compressed registry search shards were generated.")
+          for category in ("icao24", "registration", "typecode", "operator"):
+              if not any((registry_dir / category).glob("*.json.gz")):
+                  raise SystemExit(f"No search shards were generated for {category}.")
           shard_records = 0
           for shard in shard_files:
               with gzip.open(shard, "rt", encoding="utf-8") as file:

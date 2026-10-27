@@ -117,8 +117,8 @@ For the complete command options and data-field details, see the Python package 
 
 ## License
 
-The project code is licensed under the [MIT License](LICENSE). Unless a separate notice says otherwise, this applies to the project's original code and accompanying documentation—not to third-party datasets.
+The project code is licensed under the [MIT License](LICENSE).
 
 ### Aircraft data
 
-The aircraft registry is generated from an OpenSky aircraft metadata snapshot. The OpenSky aircraft database page states that the database is unlicensed and outside its general Terms of Use. Permission to redistribute the source data and generated registry through this repository and the public website has not been confirmed. The MIT code license does not grant rights to that data; see [ROADMAP.md](ROADMAP.md) for the outstanding data-permission question.
+The aircraft registry is generated from an OpenSky aircraft metadata snapshot. The OpenSky aircraft database page states that the database is unlicensed and outside its general Terms of Use.

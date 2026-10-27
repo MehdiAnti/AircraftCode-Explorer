@@ -161,7 +161,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A -- data/aircraft.json data/airframes.json data/airframes.json.gz data/airframes/ data/registry/
+          git add -A -- data/
           if git diff --cached --quiet; then
             echo "Catalog and registry files are unchanged; no commit is needed."
           else
@@ -204,27 +204,16 @@ jobs:
           mkdir -p _site/data
           cp index.html styles.css app.js _site/
           cp data/aircraft.json _site/data/aircraft.json
-          cp data/airframes.json.gz _site/data/airframes.json.gz
-          gzip --decompress --stdout data/airframes.json.gz > _site/data/airframes.json
-          test -s _site/data/airframes.json
-          python -m json.tool _site/data/airframes.json > /dev/null
           python - <<'PY'
           import json
           from pathlib import Path
           with Path("_site/data/aircraft.json").open("r", encoding="utf-8") as file:
               models = json.load(file)
-          with Path("_site/data/airframes.json").open("r", encoding="utf-8") as file:
-              airframes = json.load(file)
           if not isinstance(models, list) or not models:
               raise SystemExit("Published model catalog must be a non-empty JSON array.")
-          if not isinstance(airframes, list) or not airframes:
-              raise SystemExit("Published individual-aircraft registry must be a non-empty JSON array.")
-          if any(not isinstance(record, dict) for record in models + airframes):
-              raise SystemExit("Published JSON arrays must contain only objects.")
-          required = ("icao24", "registration", "icao_type_designator", "operator")
-          if any(not all(field in record for field in required) for record in airframes):
-              raise SystemExit("Published airframe records must contain ICAO24, registration, type-code, and operator keys.")
-          print(f"Validated published data: {len(models):,} models and {len(airframes):,} individual aircraft.")
+          if any(not isinstance(record, dict) for record in models):
+              raise SystemExit("Published model catalog must contain only objects.")
+          print(f"Validated published model catalog: {len(models):,} records.")
           PY
           mkdir -p _site/data/registry
           cp -R data/registry/icao24 data/registry/registration data/registry/typecode data/registry/operator _site/data/registry/

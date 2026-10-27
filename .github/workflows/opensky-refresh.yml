@@ -129,14 +129,18 @@ jobs:
                   plain_data = json.load(file)
               if not isinstance(plain_data, list) or any(not isinstance(item, dict) for item in plain_data):
                   raise SystemExit(f"Invalid plain JSON registry shard: {shard}")
-          if full_registry_path.stat().st_size < 90 * 1024 * 1024:
-              plain_full = Path("data/airframes.json")
-              if not plain_full.is_file():
-                  raise SystemExit("Expected data/airframes.json for a registry small enough to fit safely in Git.")
-          else:
-              parts = sorted(Path("data/airframes").glob("part-*.json"))
-              if not parts:
-                  raise SystemExit("Large full registry must be split into JSON parts.")
+          plain_full = Path("data/airframes.json")
+          parts = sorted(Path("data/airframes").glob("part-*.json"))
+          if plain_full.is_file():
+              if plain_full.stat().st_size >= 90 * 1024 * 1024:
+                  raise SystemExit("Full JSON registry exceeds the safe per-file size threshold.")
+              if parts:
+                  raise SystemExit("Do not publish both a full JSON registry and split parts.")
+          elif not parts:
+              raise SystemExit("Full JSON registry must exist or be split into JSON parts.")
+          for part in parts:
+              if part.stat().st_size >= 90 * 1024 * 1024:
+                  raise SystemExit(f"JSON part exceeds the safe per-file size threshold: {part}")
           shard_files = list(registry_dir.glob("*/*.json.gz"))
           if not shard_files:
               raise SystemExit("No compressed registry search shards were generated.")

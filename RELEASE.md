@@ -4,7 +4,7 @@
 
 Aircraft Explorer currently consists of a static HTML/CSS/JavaScript website, a Python maintenance/import CLI, and generated aircraft data. It is not currently documented as a packaged Python application for installation from a package index. The website is deployed through GitHub Pages workflows.
 
-No project license has been selected. Do not describe the project as licensed open-source software or add a license file until the repository owner explicitly chooses one. Check the applicable terms for the OpenSky source data separately from the code license.
+The project's original code and accompanying documentation are licensed under the MIT License; see `LICENSE`.
 
 ## Before a website release or deployment
 
@@ -32,7 +32,7 @@ No project license has been selected. Do not describe the project as licensed op
 
 Until version 1.0.0, the repository may use pre-1.0 versions such as `0.2.0` for a backward-compatible feature release, `0.2.1` for a compatible fix, and `0.3.0` for an interface change. These are project conventions, not a guarantee of a stable API. If the project adopts Semantic Versioning after 1.0.0, use patch releases for compatible fixes, minor releases for backward-compatible features, and major releases for incompatible public-interface changes.
 
-Do not create a version tag, publish a GitHub release, choose a license, or claim a successful deployment unless the owner has approved the decision and the relevant action has actually been completed.
+Do not create a version tag, publish a GitHub release, or claim a successful deployment unless the owner has approved the decision and the relevant action has actually been completed.
 
 ## Release notes template
 

@@ -69,6 +69,31 @@ class OpenSkyImportTests(unittest.TestCase):
             self.assertEqual(records[0]["serial_number"], "12345")
             self.assertEqual(records[0]["verification_status"], "imported_unverified")
 
+    def test_imports_complete_2024_snapshot_with_quoted_headers_and_values(self):
+        path = self.make_csv(
+            "'icao24','timestamp','acars','adsb','built','categoryDescription','country','engines','firstFlightDate','firstSeen','icaoAircraftClass','lineNumber','manufacturerIcao','manufacturerName','model','modes','nextReg','operator','operatorCallsign','operatorIata','operatorIcao','owner','prevReg','regUntil','registered','registration','selCal','serialNumber','status','typecode','vdl'\\n"
+            "'abc123','2024-05-01T00:00:00Z','yes','yes','1998','Landplane','United States','1','1998-01-01','2020-01-01','L1P','LN-1','CESS','Cessna','172 Skyhawk','S','N456CD','Example Air','EXA','EA','EXA','Example Owner','N123AB','2030-01-01','1998-02-01','N123AB','ABCD','12345','active','C172','yes'\\n"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            summary = write_opensky_registry_shards(path, directory, retrieved_at="2026-10-27T06:00:00Z")
+            with gzip.open(Path(directory) / "aircraft-registry.json.gz", "rt", encoding="utf-8") as file:
+                records = json.load(file)
+        self.assertEqual(summary["registry_records"], 1)
+        record = records[0]
+        self.assertEqual(record["icao24"], "abc123")
+        self.assertEqual(record["registration"], "N123AB")
+        self.assertEqual(record["manufacturer"], "Cessna")
+        self.assertEqual(record["manufacturer_icao"], "CESS")
+        self.assertEqual(record["icao_type_designator"], "C172")
+        self.assertEqual(record["source_timestamp"], "2024-05-01T00:00:00Z")
+        self.assertEqual(record["first_seen"], "2020-01-01")
+        self.assertEqual(record["next_registration"], "N456CD")
+        self.assertEqual(record["previous_registration"], "N123AB")
+        self.assertEqual(record["icao_aircraft_class"], "L1P")
+        self.assertEqual(record["selcal"], "ABCD")
+        self.assertEqual(record["vdl"], "yes")
+        self.assertEqual(record["source_url"], OPENSKY_SOURCE_URL)
+
     def test_preserves_missing_code_and_model(self):
         path = self.make_csv("manufacturer,model,typecode\nPiper,PA-28,\nUnknown,,ZZZZ\n")
         records, _ = import_opensky_csv(path)

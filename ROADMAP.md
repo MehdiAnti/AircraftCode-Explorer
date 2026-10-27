@@ -37,7 +37,6 @@ The user-facing explorer is a static HTML/CSS/JavaScript website. Python remains
 | Source freshness | Limited | The configured OpenSky CSV is a fixed May 2024 snapshot. |
 | Independent data verification | Not automatic | Imported records are not independently verified merely because they are present in the registry. |
 | Code license | Selected | The project's original code and documentation are licensed under MIT; see `LICENSE`. |
-| OpenSky data redistribution permission | Unresolved | The MIT license does not grant rights to OpenSky data. Permission to redistribute the source snapshot and generated registry has not been confirmed. |
 
 ## Completed project phases
 
@@ -52,7 +51,7 @@ The repository began as a Python model-catalog CLI and expanded into a static we
 - **Refresh and deployment workflows:** GitHub Actions workflows for manual source import and GitHub Pages deployment.
 - **Registry storage cleanup:** PR #18 keeps compressed registry files and removes duplicate uncompressed registry copies.
 - **Website-first documentation:** README describes the web experience first and places optional Python developer instructions in a collapsible section.
-- **License selection:** the repository's original code and documentation now use the MIT License; third-party data rights remain separate.
+- **License selection:** the repository's original code and documentation now use the MIT License.
 
 ## Verification record
 
@@ -66,8 +65,7 @@ The following operational checks are recorded as **maintainer-reported** on 2026
 
 ## Next steps
 
-1. **Resolve OpenSky data permissions:** ask OpenSky whether the May 2024 metadata snapshot, transformed records, and compressed lookup indexes may be redistributed through the public GitHub repository and GitHub Pages site. Record any attribution or use conditions once confirmed.
-2. **Keep release checks current:** before a future release, follow the checklist in `RELEASE.md` and verify the actual workflow runs and deployed behavior for that release.
+- **Keep release checks current:** before a future release, follow the checklist in `RELEASE.md` and verify the actual workflow runs and deployed behavior for that release.
 
 ## Working rules
 
@@ -77,4 +75,3 @@ The following operational checks are recorded as **maintainer-reported** on 2026
 - Never invent ICAO type designators or present imported metadata as independently verified facts.
 - Preserve source provenance and clearly state the configured dataset's freshness limitations.
 - Report only tests, workflow runs, deployments, and other actions that were actually observed.
-- Keep the code license separate from third-party data permissions.

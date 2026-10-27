@@ -179,12 +179,12 @@ Further possibilities, subject to explicit user approval: optional desktop or we
 - Keep the existing visual design and use expandable cards to show additional available aircraft fields.
 - Generate compressed JSON registry shards from the OpenSky CSV, partitioned by two-character field prefixes. Load matching shards on demand and cache them in the browser session.
 - Export available registration, ICAO24, manufacturer, model, type code, serial/line number, operator/callsign, owner, registration and flight dates, equipment flags, notes, and source provenance.
-- Generate the complete compressed aircraft-level JSON registry and search shards into the GitHub Pages artifact rather than committing large registry data to Git history. Continue committing only model-level `data/aircraft.json` on scheduled refresh.
+- Generate the compressed full aircraft-level JSON registry at `data/airframes.json.gz` and search shards under `data/registry/`, commit changed generated data during refresh, and deploy the same files to GitHub Pages. Generate uncompressed `data/airframes.json` only in the Pages artifact because it may exceed GitHub's 100 MB per-file limit.
 - Update tests, Actions workflows, README, and web documentation.
 
 **Search behavior:** Registry search requires at least two letters or digits and performs case-insensitive prefix matching with punctuation ignored. The Refresh data button reloads the latest model catalog JSON; it does not trigger Actions.
 
-**Status:** PR #11 merged. Follow-up correction adds `aircraft-registry.json.gz` to the scheduled/manual refresh and Pages artifact, validates full registry records as well as search shards, and updates documentation. Verify the follow-up PR and a live refresh/deployment before calling the full flow operational.
+**Status:** PR #11 and the follow-up registry-export work merged. This follow-up tracks the compressed full registry and generated search shards in the repository, validates all four shard categories, and updates documentation. Live refresh/deployment remains to be verified after merge.
 
 
 ## Phase 12 — Separate model catalog and individual-aircraft registry

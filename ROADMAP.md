@@ -187,6 +187,14 @@ Further possibilities, subject to explicit user approval: optional desktop or we
 **Status:** PR #11 and the follow-up registry-export work merged. This follow-up tracks the compressed full registry and generated search shards in the repository, validates all four shard categories, and updates documentation. Live refresh/deployment remains to be verified after merge.
 
 
+## OpenSky May 2024 snapshot migration
+
+**Goal:** Replace the legacy OpenSky metadata CSV URL with the supplied complete May 2024 snapshot while preserving the existing model catalog and individual-aircraft registry architecture.
+
+**Scope:** Update the scheduled refresh URL and temporary filename; map additional snapshot fields into the registry; tolerate single-quoted header/value exports; add a regression test for the snapshot schema; document that the source is a fixed snapshot rather than a live feed.
+
+**Status:** In review on branch `phase-opensky-2024-snapshot`. CI and a manual refresh/deployment have not yet been verified. The May 2024 snapshot date is not the same as a current-data timestamp.
+
 ## Phase 12 — Separate model catalog and individual-aircraft registry
 
 **Goal:** Keep model-level catalog data separate from airframe-level records while making all individual-aircraft fields directly available in the published website data.

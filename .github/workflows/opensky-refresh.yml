@@ -42,52 +42,25 @@ jobs:
       - name: Rebuild tracked catalog, full registry, and search shards
         run: |
           mkdir -p data
-          rm -rf data/registry data/airframes
-          mkdir -p data/registry data/airframes
+          rm -rf data/registry data/airframes data/airframes.json
+          mkdir -p data/registry
           python -m aircraft_explorer import-opensky \
             --metadata "$RUNNER_TEMP/aircraft-database-complete-2024-05.csv" \
             --output data/aircraft.json \
             --registry-dir data/registry
           mv data/registry/aircraft-registry.json.gz data/airframes.json.gz
-          while IFS= read -r -d '' compressed; do
-            gzip --decompress --stdout "$compressed" > "${compressed%.gz}"
-          done < <(find data/registry -type f -name '*.json.gz' -print0)
-          python - <<'PY'
-          import gzip
-          import json
-          from pathlib import Path
-
-          source = Path("data/airframes.json.gz")
-          target = Path("data/airframes.json")
-          with gzip.open(source, "rt", encoding="utf-8") as file:
-              records = json.load(file)
-          payload = json.dumps(records, ensure_ascii=False, separators=(",", ":"))
-          size = len(payload.encode("utf-8"))
-          if size < 90 * 1024 * 1024:
-              target.write_text(payload, encoding="utf-8")
-              print(f"Created data/airframes.json ({size:,} bytes).")
-          else:
-              target.unlink(missing_ok=True)
-              part_dir = Path("data/airframes")
-              part_dir.mkdir(parents=True, exist_ok=True)
-              chunk_size = 10000
-              for index in range(0, len(records), chunk_size):
-                  part = part_dir / f"part-{index // chunk_size + 1:05d}.json"
-                  part.write_text(
-                      json.dumps(records[index:index + chunk_size], ensure_ascii=False, separators=(",", ":")),
-                      encoding="utf-8",
-                  )
-              print(
-                  f"Full JSON is {size:,} bytes; split {len(records):,} records "
-                  f"into {len(list(part_dir.glob('part-*.json')))} JSON parts."
-              )
-          PY
+          test -s data/airframes.json.gz
+          if find data/registry -type f ! -name '*.json.gz' -print -quit | grep -q .; then
+            echo "Unexpected non-gzip file generated in registry directory."
+            exit 1
+          fi
 
       - name: Validate generated catalog, full registry export, and search shards
         run: |
           python - <<'PY'
           import gzip
           import json
+          import re
           from pathlib import Path
           from aircraft_explorer.core import load_aircraft
 
@@ -119,54 +92,51 @@ jobs:
           if not any(any(record.get(field) for field in required_fields) for record in full_registry):
               raise SystemExit("Full aircraft registry contains no ICAO24, registration, type-code, or operator values.")
           if full_registry_path.stat().st_size >= 90 * 1024 * 1024:
-              raise SystemExit("Compressed registry is at least 90 MiB; refusing to commit a file that could approach GitHub's 100 MB per-file limit.")
-          plain_shards = list(registry_dir.glob("*/*.json"))
-          if len(plain_shards) != len(shard_files):
-              raise SystemExit("Every compressed search shard must have an uncompressed JSON counterpart.")
-          for shard in plain_shards:
-              with shard.open("r", encoding="utf-8") as file:
-                  plain_data = json.load(file)
-              if not isinstance(plain_data, list) or any(not isinstance(item, dict) for item in plain_data):
-                  raise SystemExit(f"Invalid plain JSON registry shard: {shard}")
-          plain_full = Path("data/airframes.json")
-          parts = sorted(Path("data/airframes").glob("part-*.json"))
-          if plain_full.is_file():
-              if plain_full.stat().st_size >= 90 * 1024 * 1024:
-                  raise SystemExit("Full JSON registry exceeds the safe per-file size threshold.")
-              if parts:
-                  raise SystemExit("Do not publish both a full JSON registry and split parts.")
-          elif not parts:
-              raise SystemExit("Full JSON registry must exist or be split into JSON parts.")
-          for part in parts:
-              if part.stat().st_size >= 90 * 1024 * 1024:
-                  raise SystemExit(f"JSON part exceeds the safe per-file size threshold: {part}")
+              raise SystemExit("Compressed registry is at least 90 MiB; refusing to publish a file that could approach GitHub's 100 MB per-file limit.")
           if not shard_files:
               raise SystemExit("No compressed registry search shards were generated.")
-          for category in ("icao24", "registration", "typecode", "operator"):
-              if not any((registry_dir / category).glob("*.json.gz")):
-                  raise SystemExit(f"No search shards were generated for {category}.")
+          categories = {
+              "icao24": "icao24",
+              "registration": "registration",
+              "typecode": "icao_type_designator",
+              "operator": "operator",
+          }
           shard_records = 0
-          for shard in shard_files:
-              with gzip.open(shard, "rt", encoding="utf-8") as file:
-                  shard_data = json.load(file)
-              if not isinstance(shard_data, list) or any(not isinstance(item, dict) for item in shard_data):
-                  raise SystemExit(f"Invalid registry shard: {shard}")
-              shard_records += len(shard_data)
+          for category, field in categories.items():
+              category_shards = sorted((registry_dir / category).glob("*.json.gz"))
+              if not category_shards:
+                  raise SystemExit(f"No search shards were generated for {category}.")
+              for shard in category_shards:
+                  prefix = shard.name.removesuffix(".json.gz")
+                  with gzip.open(shard, "rt", encoding="utf-8") as file:
+                      shard_data = json.load(file)
+                  if not isinstance(shard_data, list) or any(not isinstance(item, dict) for item in shard_data):
+                      raise SystemExit(f"Invalid registry shard: {shard}")
+                  for item in shard_data:
+                      value = item.get(field)
+                      normalized = re.sub(r"[^a-z0-9]", "", str(value or "").casefold())
+                      expected_prefix = normalized[:2] or "_"
+                      if expected_prefix != prefix:
+                          raise SystemExit(f"Record does not match shard prefix {shard}: {value!r}")
+                  shard_records += len(shard_data)
+          plain_files = [path for path in registry_dir.rglob("*") if path.is_file() and not path.name.endswith(".json.gz")]
+          if plain_files:
+              raise SystemExit(f"Unexpected uncompressed registry file: {plain_files[0]}")
           print(f"Validated {len(records):,} model catalog records, {len(full_registry):,} individual-aircraft registry records, and {len(shard_files):,} search shards ({shard_records:,} indexed entries).")
           PY
 
-      - name: Commit refreshed catalog and registry files when changed
+      - name: Commit refreshed catalog and compressed registry files when changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A -- data/
           if git diff --cached --quiet; then
-            echo "Catalog and registry files are unchanged; no commit is needed."
+            echo "Catalog and compressed registry files are unchanged; no commit is needed."
           else
             git commit -m "data: refresh OpenSky catalog and aircraft registry"
             for attempt in 1 2 3 4; do
               if git push origin HEAD:main; then
-                echo "Catalog and registry files pushed successfully."
+                echo "Catalog and compressed registry files pushed successfully."
                 break
               fi
 
@@ -214,6 +184,7 @@ jobs:
           print(f"Validated published model catalog: {len(models):,} records.")
           PY
           mkdir -p _site/data/registry
+          cp data/airframes.json.gz _site/data/airframes.json.gz
           cp -R data/registry/icao24 data/registry/registration data/registry/typecode data/registry/operator _site/data/registry/
 
       - name: Upload website artifact

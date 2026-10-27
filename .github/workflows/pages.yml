@@ -43,21 +43,58 @@ jobs:
 
       - name: Download OpenSky metadata CSV
         env:
-          OPENSKY_CSV_URL: https://opensky-network.org/datasets/metadata/aircraftDatabase.csv
+          OPENSKY_CSV_URL: https://s3.opensky-network.org/data-samples/metadata/aircraft-database-complete-2024-05.csv
         run: |
           curl --fail --location --silent --show-error \
             --retry 3 --retry-delay 5 --retry-all-errors \
             "$OPENSKY_CSV_URL" \
-            --output "$RUNNER_TEMP/aircraftDatabase.csv"
-          test -s "$RUNNER_TEMP/aircraftDatabase.csv"
+            --output "$RUNNER_TEMP/aircraft-database-complete-2024-05.csv"
+          test -s "$RUNNER_TEMP/aircraft-database-complete-2024-05.csv"
 
       - name: Generate compressed aircraft registry shards
         run: |
           mkdir -p _site/data
           python -m aircraft_explorer import-opensky \
-            --metadata "$RUNNER_TEMP/aircraftDatabase.csv" \
+            --metadata "$RUNNER_TEMP/aircraft-database-complete-2024-05.csv" \
             --output "$RUNNER_TEMP/aircraft-catalog.json" \
             --registry-dir _site/data/registry
+          mv _site/data/registry/aircraft-registry.json.gz _site/data/airframes.json.gz
+          python - <<'PY'
+          import gzip
+          import json
+          import re
+          from pathlib import Path
+
+          data_dir = Path("_site/data")
+          with gzip.open(data_dir / "airframes.json.gz", "rt", encoding="utf-8") as file:
+              records = json.load(file)
+          if not isinstance(records, list) or not records or any(not isinstance(item, dict) for item in records):
+              raise SystemExit("Full compressed registry must contain a non-empty JSON array of objects.")
+          categories = {
+              "icao24": "icao24",
+              "registration": "registration",
+              "typecode": "icao_type_designator",
+              "operator": "operator",
+          }
+          for category, field in categories.items():
+              shards = sorted((data_dir / "registry" / category).glob("*.json.gz"))
+              if not shards:
+                  raise SystemExit(f"No compressed shards were generated for {category}.")
+              for shard in shards:
+                  prefix = shard.name.removesuffix(".json.gz")
+                  with gzip.open(shard, "rt", encoding="utf-8") as file:
+                      shard_records = json.load(file)
+                  if not isinstance(shard_records, list) or any(not isinstance(item, dict) for item in shard_records):
+                      raise SystemExit(f"Invalid compressed shard: {shard}")
+                  for item in shard_records:
+                      normalized = re.sub(r"[^a-z0-9]", "", str(item.get(field) or "").casefold())
+                      if (normalized[:2] or "_") != prefix:
+                          raise SystemExit(f"Shard prefix mismatch in {shard}")
+          plain_files = [path for path in (data_dir / "registry").rglob("*") if path.is_file() and not path.name.endswith(".json.gz")]
+          if plain_files:
+              raise SystemExit(f"Unexpected uncompressed registry file: {plain_files[0]}")
+          print(f"Validated compressed full registry ({len(records):,} records) and all four search categories.")
+          PY
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5

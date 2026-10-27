@@ -1,8 +1,6 @@
 name: Refresh OpenSky aircraft catalog and registry
 
 on:
-  schedule:
-    - cron: "0 6 1 * *"
   workflow_dispatch:
 
 permissions:
@@ -33,13 +31,13 @@ jobs:
 
       - name: Download OpenSky metadata CSV
         env:
-          OPENSKY_CSV_URL: https://opensky-network.org/datasets/metadata/aircraftDatabase.csv
+          OPENSKY_CSV_URL: https://s3.opensky-network.org/data-samples/metadata/aircraft-database-complete-2024-05.csv
         run: |
           curl --fail --location --silent --show-error \
             --retry 3 --retry-delay 5 --retry-all-errors \
             "$OPENSKY_CSV_URL" \
-            --output "$RUNNER_TEMP/aircraftDatabase.csv"
-          test -s "$RUNNER_TEMP/aircraftDatabase.csv"
+            --output "$RUNNER_TEMP/aircraft-database-complete-2024-05.csv"
+          test -s "$RUNNER_TEMP/aircraft-database-complete-2024-05.csv"
 
       - name: Rebuild tracked catalog, full registry, and search shards
         run: |
@@ -47,7 +45,7 @@ jobs:
           rm -rf data/registry data/airframes
           mkdir -p data/registry data/airframes
           python -m aircraft_explorer import-opensky \
-            --metadata "$RUNNER_TEMP/aircraftDatabase.csv" \
+            --metadata "$RUNNER_TEMP/aircraft-database-complete-2024-05.csv" \
             --output data/aircraft.json \
             --registry-dir data/registry
           mv data/registry/aircraft-registry.json.gz data/airframes.json.gz

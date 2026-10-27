@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 
-OPENSKY_SOURCE_URL = "https://opensky-network.org/data/aircraft"
+OPENSKY_SOURCE_URL = "https://s3.opensky-network.org/data-samples/metadata/aircraft-database-complete-2024-05.csv"
 
 
 class OpenSkyImportError(ValueError):
@@ -33,6 +33,8 @@ def _clean(value: Any) -> str | None:
     if not isinstance(value, str):
         return None
     value = " ".join(value.split())
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        value = value[1:-1].strip()
     return value or None
 
 
@@ -171,6 +173,14 @@ _REGISTRY_FIELDS = {
     "serialnumber": "serial_number",
     "linenumber": "line_number",
     "icaoaircrafttype": "icao_aircraft_type",
+    "icaoaircraftclass": "icao_aircraft_class",
+    "timestamp": "source_timestamp",
+    "country": "country",
+    "firstseen": "first_seen",
+    "nextreg": "next_registration",
+    "prevreg": "previous_registration",
+    "selcal": "selcal",
+    "vdl": "vdl",
     "operator": "operator",
     "operatorcallsign": "operator_callsign",
     "operatoricao": "operator_icao",

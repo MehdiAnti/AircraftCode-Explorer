@@ -179,12 +179,12 @@ Further possibilities, subject to explicit user approval: optional desktop or we
 - Keep the existing visual design and use expandable cards to show additional available aircraft fields.
 - Generate compressed JSON registry shards from the OpenSky CSV, partitioned by two-character field prefixes. Load matching shards on demand and cache them in the browser session.
 - Export available registration, ICAO24, manufacturer, model, type code, serial/line number, operator/callsign, owner, registration and flight dates, equipment flags, notes, and source provenance.
-- Generate the compressed full aircraft-level JSON registry at `data/airframes.json.gz` and search shards under `data/registry/`, commit changed generated data during refresh, and deploy the same files to GitHub Pages. Generate uncompressed `data/airframes.json` only in the Pages artifact because it may exceed GitHub's 100 MB per-file limit.
+- Generate the compressed full aircraft-level JSON registry and compressed search shards, track those `.json.gz` files in Git, and publish them to GitHub Pages. Remove uncompressed JSON copies and do not generate them.
 - Update tests, Actions workflows, README, and web documentation.
 
 **Search behavior:** Registry search requires at least two letters or digits and performs case-insensitive prefix matching with punctuation ignored. The Refresh data button reloads the latest model catalog JSON; it does not trigger Actions.
 
-**Status:** PR #11 and the follow-up registry-export work merged. This follow-up tracks the compressed full registry and generated search shards in the repository, validates all four shard categories, and updates documentation. Live refresh/deployment remains to be verified after merge.
+**Status:** Registry search and publication are implemented. The refresh workflow validates all four compressed shard categories and their two-character prefixes, publishes the compressed registry data to GitHub Pages, and tracks only compressed registry exports rather than duplicate plain JSON copies.
 
 
 ## OpenSky May 2024 snapshot migration
@@ -193,7 +193,7 @@ Further possibilities, subject to explicit user approval: optional desktop or we
 
 **Scope:** Update the scheduled refresh URL and temporary filename; map additional snapshot fields into the registry; tolerate single-quoted header/value exports; add a regression test for the snapshot schema; document that the source is a fixed snapshot rather than a live feed.
 
-**Status:** In review on branch `phase-opensky-2024-snapshot`. CI and a manual refresh/deployment have not yet been verified. The May 2024 snapshot date is not the same as a current-data timestamp.
+**Status:** Merged in PR #17. The manual refresh has generated the May 2024 snapshot registry. The snapshot is fixed historical metadata, not a live feed; the retrieval timestamp records import time, not the source dataset's update time.
 
 ## Phase 12 — Separate model catalog and individual-aircraft registry
 
@@ -201,11 +201,11 @@ Further possibilities, subject to explicit user approval: optional desktop or we
 
 **Scope:**
 - Keep the existing tracked model catalog at `data/aircraft.json` to preserve the large existing dataset; update the workflow, website, tests, and documentation to publish individual airframes separately.
-- Publish the full individual-aircraft registry as `data/airframes.json` and `data/airframes.json.gz`; keep the website's on-demand compressed search shards for performance.
+- Publish the full individual-aircraft registry as `data/airframes.json.gz`; keep the website's on-demand compressed search shards for performance.
 - Preserve expandable model and individual-aircraft cards; the website must not load the large full registry on initial page load.
-- Change the automated refresh schedule to the first day of each month at 06:00 UTC while retaining manual workflow dispatch.
-- Validate both published JSON arrays and required individual-aircraft field keys before deployment. Commit only the model catalog, never the large individual-aircraft registry.
+- Keep the refresh workflow manual-only while the configured source is the fixed May 2024 snapshot.
+- Validate the model catalog JSON and full compressed registry array, including required individual-aircraft field keys, before deployment. Commit the model catalog and compressed individual-aircraft registry; do not commit uncompressed copies.
 
-**Acceptance criteria:** CLI defaults to `data/aircraft.json`; website catalog fetches `data/aircraft.json`; registry search continues to use shards; the Pages artifact contains model JSON, plain `data/airframes.json`, gzip `data/airframes.json.gz`, and all four shard groups; tests and workflow validation pass.
+**Acceptance criteria:** CLI defaults to `data/aircraft.json`; website catalog fetches `data/aircraft.json`; registry search fetches only matching `.json.gz` shards; the Pages artifact contains the model catalog, compressed full registry, and all four compressed shard groups; only compressed registry data is committed to Git; tests and workflow validation pass.
 
-**Status:** Proposed on a feature branch. CI and a live Pages deployment must be observed before considering this phase complete.
+**Status:** Implemented in the registry refresh workflow. A successful run of the updated workflow and live Pages deployment remains the final verification step.

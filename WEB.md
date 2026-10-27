@@ -7,20 +7,18 @@ The static HTML/CSS/JavaScript website is deployed through GitHub Pages. It keep
 | Published path | Purpose |
 | --- | --- |
 | `data/aircraft.json` | Existing model/manufacturer/type-code catalog used by the website's catalog search and refresh button |
-| `data/airframes.json` | Uncompressed full individual-aircraft registry, when it fits safely in one Git file |
 | `data/airframes.json.gz` | Gzip-compressed full individual-aircraft registry |
-| `data/airframes/part-*.json` | Uncompressed parts of the full registry when one JSON file would be too large |
-| `data/registry/` | Compressed search shards plus uncompressed `.json` counterparts for direct inspection |
+| `data/registry/` | Gzip-compressed search shards, grouped by lookup category and two-character prefix |
 
-The website loads only `data/aircraft.json` for model-level catalog search. It does **not** download the full individual-aircraft JSON on initial page load; individual-aircraft search fetches only the relevant compressed shard and caches it for the current page session. The full airframe JSON files are published for direct data access and download.
+The website loads only `data/aircraft.json` for model-level catalog search. It does **not** download the full individual-aircraft registry on initial page load; individual-aircraft search fetches only the relevant compressed shard and caches it for the current page session. JavaScript decompresses each `.json.gz` shard using the browser's `DecompressionStream` API. The full compressed registry is also published for direct data access and download.
 
 ## Refresh behavior
 
 The **Refresh data** button reloads the latest published model catalog JSON at `data/aircraft.json`. It does not trigger a workflow and does not need a GitHub token.
 
-The **Refresh OpenSky aircraft catalog and registry** workflow runs on the first day of each month at 06:00 UTC and also supports manual dispatch. It downloads the OpenSky metadata CSV to temporary runner storage, updates and validates the model catalog in `data/aircraft.json`, rebuilds the individual-aircraft registry and search shards directly under `data/`, creates missing folders, writes compressed and plain JSON versions, validates file sizes and contents, commits changed catalog and registry files, and deploys the generated site. Old search shards are removed before each refresh.
+The **Refresh OpenSky aircraft catalog and registry** workflow is manual-only because the configured source is a fixed May 2024 snapshot. It downloads the source CSV to temporary runner storage, updates and validates the model catalog in `data/aircraft.json`, rebuilds the full compressed registry and compressed search shards in the workflow workspace, validates their contents and shard prefixes, commits the model catalog and compressed registry files, and deploys the generated site. Old generated files are removed before each refresh.
 
-The source CSV is never committed. The workflow stores both compressed and uncompressed search shards. It also stores the uncompressed full registry as `data/airframes.json` when it is below 90 MiB; otherwise, it splits the full registry into `data/airframes/part-*.json` files. The compressed full registry is checked against a 90 MiB safety threshold, and every plain JSON file is size-validated before committing.
+The source CSV and uncompressed registry copies are never committed. The compressed full registry and compressed search shards are tracked in Git and published to GitHub Pages. The workflow does not create or publish uncompressed JSON copies.
 
 ## Search behavior
 
@@ -52,6 +50,6 @@ To generate the registry locally from an already downloaded CSV:
 
     python -m aircraft_explorer import-opensky --metadata /path/to/aircraftDatabase.csv --registry-dir data/registry
 
-The command writes compressed shards and `data/registry/aircraft-registry.json.gz`. The automated workflow moves the full compressed registry to `data/airframes.json.gz` and generates plain JSON counterparts.
+The command writes compressed shards and `data/registry/aircraft-registry.json.gz`. The automated workflow moves the full compressed registry to the Pages artifact as `data/airframes.json.gz`. It does not generate plain JSON counterparts.
 
 The command also updates the selected model catalog unless you use `--dry-run`. Keep local CSV files and generated shards out of commits unless their distribution and repository-size implications have been deliberately reviewed.

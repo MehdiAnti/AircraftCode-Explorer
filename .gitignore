@@ -13,3 +13,7 @@ dist/
 htmlcov/
 .DS_Store
 Thumbs.db
+
+data/registry/**/*.json
+data/airframes.json
+data/airframes/

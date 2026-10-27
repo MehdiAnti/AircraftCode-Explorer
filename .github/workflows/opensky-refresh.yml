@@ -105,6 +105,7 @@ jobs:
               raise SystemExit("Catalog validation changed the record count.")
 
           registry_dir = Path("data/registry")
+          shard_files = list(registry_dir.glob("*/*.json.gz"))
           full_registry_path = Path("data/airframes.json.gz")
           if not full_registry_path.is_file() or full_registry_path.stat().st_size == 0:
               raise SystemExit("Full compressed aircraft registry export is missing or empty.")
@@ -141,7 +142,6 @@ jobs:
           for part in parts:
               if part.stat().st_size >= 90 * 1024 * 1024:
                   raise SystemExit(f"JSON part exceeds the safe per-file size threshold: {part}")
-          shard_files = list(registry_dir.glob("*/*.json.gz"))
           if not shard_files:
               raise SystemExit("No compressed registry search shards were generated.")
           for category in ("icao24", "registration", "typecode", "operator"):

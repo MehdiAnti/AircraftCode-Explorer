@@ -4,7 +4,7 @@
 
 Aircraft Explorer currently consists of a static HTML/CSS/JavaScript website, a Python maintenance/import CLI, and generated aircraft data. It is not currently documented as a packaged Python application for installation from a package index. The website is deployed through GitHub Pages workflows.
 
-The project's original code and accompanying documentation are licensed under the MIT License; see `LICENSE`. This code license does not grant redistribution rights for the OpenSky aircraft metadata or generated registry. The source dataset's redistribution permissions remain unconfirmed; see `ROADMAP.md`.
+The project's original code and accompanying documentation are licensed under the MIT License; see `LICENSE`.
 
 ## Before a website release or deployment
 
@@ -18,7 +18,6 @@ The project's original code and accompanying documentation are licensed under th
 - [ ] Check that the displayed data-source and freshness limitations are accurate; the configured OpenSky source is a fixed May 2024 snapshot.
 - [ ] Check that no CSV source file, credentials, temporary files, or unintended data changes were committed.
 - [ ] Confirm the intended website visibility, especially if the repository is private.
-- [ ] Resolve or explicitly document the permissions for redistributing the OpenSky source data and generated registry before distributing them publicly.
 
 ## Before a Python CLI/source release
 

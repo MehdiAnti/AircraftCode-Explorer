@@ -7,9 +7,10 @@ The static HTML/CSS/JavaScript website is deployed through GitHub Pages. It keep
 | Published path | Purpose |
 | --- | --- |
 | `data/aircraft.json` | Existing model/manufacturer/type-code catalog used by the website's catalog search and refresh button |
-| `data/airframes.json.gz` | Tracked gzip-compressed full individual-aircraft registry |
-| `data/registry/` | Tracked compressed search shards for fast lookup by ICAO24, registration, type code, and operator |
-| Published `data/airframes.json` | Uncompressed full registry generated in the Pages artifact for direct access and download |
+| `data/airframes.json` | Uncompressed full individual-aircraft registry, when it fits safely in one Git file |
+| `data/airframes.json.gz` | Gzip-compressed full individual-aircraft registry |
+| `data/airframes/part-*.json` | Uncompressed parts of the full registry when one JSON file would be too large |
+| `data/registry/` | Compressed search shards plus uncompressed `.json` counterparts for direct inspection |
 
 The website loads only `data/aircraft.json` for model-level catalog search. It does **not** download the full individual-aircraft JSON on initial page load; individual-aircraft search fetches only the relevant compressed shard and caches it for the current page session. The full airframe JSON files are published for direct data access and download.
 
@@ -17,9 +18,9 @@ The website loads only `data/aircraft.json` for model-level catalog search. It d
 
 The **Refresh data** button reloads the latest published model catalog JSON at `data/aircraft.json`. It does not trigger a workflow and does not need a GitHub token.
 
-The **Refresh OpenSky aircraft catalog and registry** workflow runs on the first day of each month at 06:00 UTC and also supports manual dispatch. It downloads the OpenSky metadata CSV to temporary runner storage, updates and validates the model catalog in `data/aircraft.json`, rebuilds the individual-aircraft registry and search shards directly under `data/`, validates the outputs, commits changed catalog and registry files, and deploys the generated site. Old search shards are removed before each refresh.
+The **Refresh OpenSky aircraft catalog and registry** workflow runs on the first day of each month at 06:00 UTC and also supports manual dispatch. It downloads the OpenSky metadata CSV to temporary runner storage, updates and validates the model catalog in `data/aircraft.json`, rebuilds the individual-aircraft registry and search shards directly under `data/`, creates missing folders, writes compressed and plain JSON versions, validates file sizes and contents, commits changed catalog and registry files, and deploys the generated site. Old search shards are removed before each refresh.
 
-The source CSV and uncompressed full registry are not committed. The compressed full registry and search shards are committed under `data/`. The workflow stops before committing if the compressed registry reaches 90 MiB, leaving a margin below GitHub's 100 MB per-file limit.
+The source CSV is never committed. The workflow stores both compressed and uncompressed search shards. It also stores the uncompressed full registry as `data/airframes.json` when it is below 90 MiB; otherwise, it splits the full registry into `data/airframes/part-*.json` files. The compressed full registry is checked against a 90 MiB safety threshold, and every plain JSON file is size-validated before committing.
 
 ## Search behavior
 
@@ -51,6 +52,6 @@ To generate the registry locally from an already downloaded CSV:
 
     python -m aircraft_explorer import-opensky --metadata /path/to/aircraftDatabase.csv --registry-dir data/registry
 
-The command also writes `data/registry/aircraft-registry.json.gz`; move that file to `data/airframes.json.gz` to match the automated workflow layout.
+The command writes compressed shards and `data/registry/aircraft-registry.json.gz`. The automated workflow moves the full compressed registry to `data/airframes.json.gz` and generates plain JSON counterparts.
 
 The command also updates the selected model catalog unless you use `--dry-run`. Keep local CSV files and generated shards out of commits unless their distribution and repository-size implications have been deliberately reviewed.

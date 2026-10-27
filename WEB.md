@@ -1,55 +1,92 @@
-# Web explorer and automated refresh
+# Web Explorer and Data Refresh
 
-The static HTML/CSS/JavaScript website is deployed through GitHub Pages. It keeps model-level catalog data separate from individual-aircraft registry data, so registrations and operators never overwrite or conflict with model records.
+## Overview
 
-## Data files
+Aircraft Explorer is a static HTML/CSS/JavaScript website published through GitHub Pages. It separates model-level catalog records from individual-aircraft records so a registration or operator does not overwrite a model record.
+
+## Website behavior
+
+- **Aircraft catalog:** search model-level records by model name, manufacturer, description, or ICAO type designator. Catalog results support sorting and pagination.
+- **Registration:** search individual aircraft by registration prefix.
+- **ICAO24:** search individual aircraft by ICAO24 address prefix.
+- **ICAO type code:** search individual aircraft by type-code prefix.
+- **Operator:** search individual aircraft by operator-name prefix.
+- Registry searches require at least two letters or digits, ignore case, and normalize punctuation for matching.
+- Expand a result to inspect the source fields available for that record, such as registration, ICAO24, manufacturer, model, type code, serial/line number, operator/callsign, ownership, dates, equipment flags, notes, source, and retrieval metadata.
+
+The browser loads the model catalog from `data/aircraft.json`. It does not fetch the full individual-aircraft registry on initial page load. Individual-aircraft search fetches only relevant compressed lookup shards and caches loaded shard data for the page session. The browser decompresses gzip data using the built-in `DecompressionStream` API.
+
+## Published data layout
 
 | Published path | Purpose |
 | --- | --- |
-| `data/aircraft.json` | Existing model/manufacturer/type-code catalog used by the website's catalog search and refresh button |
-| `data/airframes.json.gz` | Gzip-compressed full individual-aircraft registry |
-| `data/registry/` | Gzip-compressed search shards, grouped by lookup category and two-character prefix |
+| `data/aircraft.json` | Model/manufacturer/type-code catalog used for catalog search and the website's Refresh data button |
+| `data/airframes.json.gz` | Full gzip-compressed individual-aircraft registry |
+| `data/registry/icao24/*.json.gz` | Lookup shards indexed by ICAO24 |
+| `data/registry/registration/*.json.gz` | Lookup shards indexed by registration |
+| `data/registry/typecode/*.json.gz` | Lookup shards indexed by ICAO type code |
+| `data/registry/operator/*.json.gz` | Lookup shards indexed by operator |
 
-The website loads only `data/aircraft.json` for model-level catalog search. It does **not** download the full individual-aircraft registry on initial page load; individual-aircraft search fetches only the relevant compressed shard and caches it for the current page session. JavaScript decompresses each `.json.gz` shard using the browser's `DecompressionStream` API. The full compressed registry is also published for direct data access and download.
+The full registry and lookup shards are kept compressed to avoid duplicate plain-text registry copies. `data/aircraft.json` intentionally remains ordinary JSON because it is the smaller model catalog consumed directly by the website.
+
+## Data source and freshness
+
+Both workflows currently use this fixed OpenSky metadata snapshot:
+
+`https://s3.opensky-network.org/data-samples/metadata/aircraft-database-complete-2024-05.csv`
+
+This is a **May 2024 snapshot**, not a live feed. Running a workflow again rebuilds outputs from that same source; it does not make the source data more recent.
+
+Imported records are not automatically independently verified. Treat absent fields as unknown and check important facts against authoritative evidence before relying on them.
 
 ## Refresh behavior
 
-The **Refresh data** button reloads the latest published model catalog JSON at `data/aircraft.json`. It does not trigger a workflow and does not need a GitHub token.
+### Website Refresh data button
 
-The **Refresh OpenSky aircraft catalog and registry** workflow is manual-only because the configured source is a fixed May 2024 snapshot. It downloads the source CSV to temporary runner storage, updates and validates the model catalog in `data/aircraft.json`, rebuilds the full compressed registry and compressed search shards in the workflow workspace, validates their contents and shard prefixes, commits the model catalog and compressed registry files, and deploys the generated site. Old generated files are removed before each refresh.
+The **Refresh data** button reloads the published model catalog at `data/aircraft.json`. It does not start GitHub Actions and does not require a GitHub token.
 
-The source CSV and uncompressed registry copies are never committed. The compressed full registry and compressed search shards are tracked in Git and published to GitHub Pages. The workflow does not create or publish uncompressed JSON copies.
+### Refresh OpenSky aircraft catalog and registry workflow
 
-## Search behavior
+This workflow is manual-only. To run it:
 
-- **Aircraft catalog:** searches model-level records and retains sorting and pagination.
-- **Registration:** finds individual airframes by registration prefix.
-- **ICAO24 address:** finds individual airframes by their six-character ICAO24 address prefix.
-- **ICAO type code:** finds individual airframes by type-code prefix.
-- **Operator:** finds individual airframes by operator-name prefix.
-- Registry lookup requires at least two letters or digits. Search ignores case and removes punctuation for registry matching.
-- Expand a result card to view available source fields, including registration, ICAO24, manufacturer, model, type code, serial/line number, operator/callsign, ownership, registration dates, build/first-flight dates, equipment flags, notes, source, and retrieval time.
-- Imported records remain `imported_unverified`. Data availability does not imply independent verification.
+1. Open the repository's **Actions** tab.
+2. Select **Refresh OpenSky aircraft catalog and registry**.
+3. Choose **Run workflow** on the `main` branch.
+4. Wait for the tests, source download, import, generated-data validation, commit step, and Pages deployment to finish.
+5. Inspect the workflow summary and deployed website.
 
-## First-time setup
+The workflow downloads the CSV to temporary runner storage, rebuilds `data/aircraft.json`, the full `data/airframes.json.gz` registry, and the compressed lookup shards, validates the outputs, commits changed data files, and prepares the site for deployment. The workflow is configured to reject unexpected uncompressed files in the registry output.
 
-1. In repository Settings → Pages, select **GitHub Actions** as the build and deployment source.
-2. Merge the website and workflow changes into `main`.
-3. Check the **Deploy aircraft explorer website** workflow for the deployment.
-4. Open the Pages URL shown in the deployment summary.
+### Deploy aircraft explorer website workflow
 
-A GitHub Pages site may be publicly accessible even when its source repository is private. Confirm repository plan and intended website visibility before enabling Pages.
+The Pages workflow deploys the static application and generates compressed registry data for the Pages artifact using the configured source snapshot. It runs on relevant pushes to `main` and can also be dispatched manually.
 
-## Local checks
+Check the actual Actions run before assuming a workflow succeeded. A workflow definition or successful commit alone does not prove that the live Pages site is working.
 
-Run the Python test suite from the repository root:
+## First-time Pages setup
 
-    python -m unittest discover -s tests -v
+1. Open repository **Settings → Pages**.
+2. Set the build and deployment source to **GitHub Actions**.
+3. Run the **Deploy aircraft explorer website** workflow or merge the relevant website/workflow changes into `main`.
+4. Open the Pages URL shown in the successful deployment summary.
 
-To generate the registry locally from an already downloaded CSV:
+Confirm the repository plan and intended site visibility before enabling Pages: the published website may be publicly accessible even when the source repository is private.
 
-    python -m aircraft_explorer import-opensky --metadata /path/to/aircraftDatabase.csv --registry-dir data/registry
+## Local maintenance and checks
 
-The command writes compressed shards and `data/registry/aircraft-registry.json.gz`. The automated workflow moves the full compressed registry to the Pages artifact as `data/airframes.json.gz`. It does not generate plain JSON counterparts.
+Python is needed for repository maintenance and data import, not for ordinary use of the deployed website. From the repository root, run tests with:
 
-The command also updates the selected model catalog unless you use `--dry-run`. Keep local CSV files and generated shards out of commits unless their distribution and repository-size implications have been deliberately reviewed.
+```bash
+python -m unittest discover -s tests -v
+```
+
+To generate catalog and registry outputs from a CSV already downloaded locally:
+
+```bash
+python -m aircraft_explorer import-opensky \
+  --metadata /path/to/aircraft-database-complete-2024-05.csv \
+  --output data/aircraft.json \
+  --registry-dir data/registry
+```
+
+The importer writes the full registry as `aircraft-registry.json.gz` inside the selected registry directory, along with the compressed lookup shards. The refresh workflow moves that full gzip file to `data/airframes.json.gz`. Do not add plain JSON registry copies or the source CSV to Git unless their distribution and repository-size implications have been deliberately reviewed.

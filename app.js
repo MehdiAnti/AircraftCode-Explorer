@@ -285,7 +285,7 @@ function scheduleSearch() {
     filter();
   }, SEARCH_DELAY);
 }
-async function loadCatalog() {
+async function loadCatalog(forceRefresh = false) {
   if (loading) return;
   registryCache.clear();
   loading = true;
@@ -295,8 +295,9 @@ async function loadCatalog() {
   updateStats();
   render();
   try {
-    const response = await fetch(DATA_URL, {
-      cache: "default",
+    const url = forceRefresh ? DATA_URL + "?v=" + Date.now() : DATA_URL;
+    const response = await fetch(url, {
+      cache: forceRefresh ? "no-store" : "default",
       headers: { Accept: "application/json" },
     });
     if (!response.ok) throw new Error("Catalog request failed with HTTP " + response.status);
@@ -335,7 +336,7 @@ el.mode.addEventListener("change", () => {
 });
 el.sort.closest(".sort-control").hidden = el.mode.value !== "catalog";
 el.sort.addEventListener("change", filter);
-el.refresh.addEventListener("click", loadCatalog);
+el.refresh.addEventListener("click", () => loadCatalog(true));
 el.clear.addEventListener("click", () => {
   if (searchTimer !== null) clearTimeout(searchTimer);
   searchTimer = null;
